@@ -86,6 +86,7 @@ contains
     integer :: i  !!  hook loop index
     integer :: l  !!  level loop index
 
+    ! print *, "Hook: ", hook_names(hook)
 
     pf%state%hook = hook
     if (level_index == -1) then  ! Do to all levels

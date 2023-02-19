@@ -63,6 +63,7 @@ module pf_mod_dtype
     integer :: itcnt    !! total iterations by this processor
     integer :: skippedy !! skipped sweeps for state (for mixed integration)
     integer :: mysteps  !! steps I did
+    integer :: steps_done  !! number of steps done globally
   end type pf_state_t
 
   !>  Abstract hook type: hooks call diagnostic routines from various places in code
@@ -235,6 +236,24 @@ module pf_mod_dtype
      procedure(pf_broadcast_p),   pointer, nopass :: broadcast
   end type pf_comm_t
 
+
+
+!  !>  Data type for dynamic MPI
+  type :: pf_dynres_t
+     type(c_ptr)         :: session    ! the mpi session
+     character(len=4096) :: main_pset ! the main process set used TODO: allocate to be max pset length
+
+     logical             :: is_dynamic_start = .false.
+     logical             :: needs_shutdown = .false.
+
+     character(len=4096) :: delta_pset  ! resource change process set
+     integer             :: rc_type ! the resource change type
+     integer             :: rc_tag ! the resource change tag/handle
+
+     logical             :: sync_root ! whether this process is the sync root for state synchronization
+  end type pf_dynres_t
+
+
   type :: pf_results_t
      real(pfdp), allocatable ::    errors(:,:,:,:)
      real(pfdp), allocatable :: residuals(:,:,:,:)  !  (level,block,niter+1,sweep)
@@ -256,7 +275,7 @@ module pf_mod_dtype
      procedure(pf_results_p), pointer, nopass :: destroy 
   end type pf_results_t
 
-  !>  The main PFASST data type which includes pretty much everythingl
+  !>  The main PFASST data type which includes pretty much everything
   type :: pf_pfasst_t
      !> === Mandatory pfasst parameters (must be set on command line or input file)  ===
      integer :: nlevels = -1             !! number of pfasst levels
@@ -306,6 +325,9 @@ module pf_mod_dtype
      integer :: rk_nstages(PF_MAXLEVS)=-1 !! number of runge-kutta stages per level
      logical :: RK_pred = .false.         !!  true if the coarse level is initialized with Runge-Kutta instead of PFASST
 
+     ! -- dynamic MPI options
+     logical :: use_dynamic_mpi = .false.
+
      ! -- misc
      logical :: debug = .false.         !!  If true, debug diagnostics are printed
 
@@ -324,7 +346,8 @@ module pf_mod_dtype
      type(pf_level_t), allocatable :: levels(:) !! Holds the levels
      type(pf_comm_t),  pointer :: comm    !! Points to communicator
      type(pf_results_t) :: results   !!  Hold results for each level
- 
+     type(pf_dynres_t), pointer :: dynres !! points to dynamic resource object
+
      !> hooks variables
      type(pf_hook_t), allocatable :: hooks(:,:,:)  !!  Holds the hooks
      integer,  allocatable :: nhooks(:,:)   !!  Holds the number hooks

@@ -10,20 +10,22 @@ module pf_mod_results
   
 
 
-contains  
+contains
+  ! JAN: TODO: fix the nprocs stuff
   subroutine initialize_results(pf)
     type(pf_pfasst_t), intent(inout) :: pf    
 
     character(len = 128) :: datpath  !!  path to output files
     character(len = 128) :: dirname  !!  output file name for residuals
     integer :: istat,system
-    integer nlevs,nsteps,nblocks,nprocs,niters,max_nsweeps    !  local variables for code brevity
+    !integer nlevs,nsteps,nblocks,nprocs,niters,max_nsweeps    !  local variables for code brevity
+    integer nlevs,nsteps,nprocs,niters,max_nsweeps    !  local variables for code brevity
     nlevs=pf%nlevels
-    nblocks=pf%nlevels
+    !nblocks=pf%nlevels
     nsteps=pf%state%nsteps
     nprocs=pf%comm%nproc
     niters=pf%niters
-    nblocks=nsteps/nprocs
+    !nblocks=nsteps/nprocs
     max_nsweeps=max(maxval(pf%nsweeps),maxval(pf%nsweeps_pred))
     
 
@@ -32,7 +34,7 @@ contains
     pf%results%nsteps=nsteps
     pf%results%nprocs=nprocs
     pf%results%niters=niters
-    pf%results%nblocks=nblocks
+    !pf%results%nblocks=nblocks
     pf%results%max_nsweeps=max_nsweeps
     pf%results%rank=pf%rank
     pf%results%save_residuals=pf%save_residuals
@@ -40,25 +42,25 @@ contains
     pf%results%save_delta_q0=pf%save_delta_q0
     istat=0
     if(.not.allocated(pf%results%errors) .and. pf%results%save_errors) then
-       allocate(pf%results%errors(nlevs, nblocks,niters+1, max_nsweeps),stat=istat)
+       allocate(pf%results%errors(nlevs, nsteps,niters+1, max_nsweeps),stat=istat)
        if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)
        pf%results%errors = -1.0_pfdp
     end if
     
     if(.not.allocated(pf%results%residuals) .and. pf%results%save_residuals) then
-       allocate(pf%results%residuals(nlevs, nblocks,niters+1, max_nsweeps),stat=istat)
+       allocate(pf%results%residuals(nlevs, nsteps,niters+1, max_nsweeps),stat=istat)
        if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)
        pf%results%residuals = -1.0_pfdp
     endif
     
 
     if(.not.allocated(pf%results%delta_q0) .and. pf%results%save_delta_q0) then
-       allocate(pf%results%delta_q0(nlevs,nblocks,niters+1, max_nsweeps),stat=istat)
+       allocate(pf%results%delta_q0(nlevs,nsteps,niters+1, max_nsweeps),stat=istat)
        if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)
        pf%results%delta_q0 = -1.0_pfdp
     end if
     
-    if(.not.allocated(pf%results%iters)) allocate(pf%results%iters(nblocks),stat=istat)
+    if(.not.allocated(pf%results%iters)) allocate(pf%results%iters(nsteps),stat=istat)
     if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)                   
     pf%results%iters = niters  
 
@@ -76,6 +78,8 @@ contains
   end subroutine initialize_results
 
   subroutine dump_results(this)
+    ! TODO: JAN hier muss die anzahl an blocks irgendwie übergeben werden
+    ! TODO: JAN idealerweise gibt es auch eine option die blockgrößen mitzuspeicher/auszugeben
     type(pf_results_t), intent(inout) :: this
     integer :: kblock, kiter, ksweep,nstep,klevel
     integer :: system
@@ -107,7 +111,8 @@ contains
     end if
     if (this%save_residuals .or. this%save_errors .or. this%save_delta_q0) then
        do klevel=1,this%nlevs
-          do kblock = 1, this%nblocks
+          !do kblock = 1, this%nblocks
+          do kblock = 1, this%nsteps
              nstep=(kblock-1)*this%nprocs+this%rank+1
              do kiter = 0 , this%niters
                 do ksweep = 1, this%max_nsweeps
@@ -128,7 +133,8 @@ contains
     iname = trim(this%datpath) // '/iter.dat'
     istream=8000+this%rank
     open(istream, file=trim(iname), form='formatted',err=999)
-    do kblock = 1, this%nblocks
+    !do kblock = 1, this%nblocks
+    do kblock = 1, this%nsteps
        nstep=(kblock-1)*this%nprocs+this%rank+1
        write(istream, '(I10,I10, e22.14)') nstep,kblock,this%iters(kblock)
     enddo

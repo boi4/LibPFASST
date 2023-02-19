@@ -46,7 +46,7 @@ contains
     pf%comm => comm
 
     !>  Set up the mpi communicator
-    call pf_mpi_setup(pf%comm, pf,ierr) 
+    call pf_mpi_setup(pf%comm, pf,ierr)
     if (ierr /=0 )  call pf_stop(__FILE__,__LINE__,"ERROR: mpi_setup failed")
 
     if (pf%rank < 0) then
@@ -83,11 +83,11 @@ contains
     ierr= system('mkdir -p dat')
     if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory dat")       
 
-    !  Stick the number of processors on the end of the output directory 
+    !  Stick the number of processors on the end of the output directory
     write (dirname, "(A1,I0.4)") 'P',pf%comm%nproc
     pf%outdir       = trim(pf%outdir)//trim(dirname)
     ierr= system('mkdir -p dat/' // trim(pf%outdir))
-    if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make base directory")    
+    if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make base directory")
 
   end subroutine pf_pfasst_create
 
@@ -362,6 +362,7 @@ contains
     logical    :: save_residuals,save_delta_q0, save_errors
     integer    :: save_timings, save_solutions
     logical    :: use_no_left_q,use_composite_nodes,use_proper_nodes
+    logical    :: use_dynamic_mpi
     
     ! stuff for reading the command line
     integer, parameter :: un = 9
@@ -379,6 +380,7 @@ contains
     namelist /pf_params/ Vcycle,Finterp,  debug, save_timings,save_residuals,save_delta_q0, save_errors, save_solutions
     namelist /pf_params/ use_sdc_sweeper,sweep_at_conv,use_pysdc_V,use_LUq, use_Sform
     namelist /pf_params/ use_no_left_q,use_composite_nodes,use_proper_nodes, use_rk_stepper, outdir
+    namelist /pf_params/ use_dynamic_mpi
 
     !> set local variables to pf_pfasst defaults
     nlevels      = pf%nlevels
@@ -418,6 +420,8 @@ contains
     use_no_left_q      = pf%use_no_left_q
     use_composite_nodes= pf%use_composite_nodes
     use_proper_nodes   = pf%use_proper_nodes
+
+    use_dynamic_mpi = pf%use_dynamic_mpi
 
     !> open the file "fname" and read the pfasst namelist
     if (present(fname))  then
@@ -478,6 +482,8 @@ contains
     pf%use_no_left_q       = use_no_left_q
     pf%use_composite_nodes = use_composite_nodes
     pf%use_proper_nodes    = use_proper_nodes
+
+    pf%use_dynamic_mpi = use_dynamic_mpi
 
     !>  Sanity check
     if (pf%nlevels < 1) then
@@ -602,6 +608,13 @@ contains
        endif
        
        if (pf%debug) write(un,*) 'Debug mode is on '
+
+       if (pf%use_dynamic_mpi) then
+          write(un,*) 'Dynamic MPI is ON'
+        else
+          write(un,*) 'Dynamic MPI is OFF'
+        end if
+        ! TODO: JAN: some options may conflict with dynamic mpi, could add checks here (e.g. results saving maybe)
     end if
 
   end subroutine pf_print_options

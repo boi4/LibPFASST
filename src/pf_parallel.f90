@@ -14,13 +14,14 @@ module pf_mod_parallel
   use pf_mod_hooks
   use pf_mod_comm
   use pf_mod_results
+  use pf_mod_dynres
   implicit none
 contains
 
   !>  This is the main interface to pfasst.
   !!  It examines the parameters and decides which subroutine to call
   !!  to execute the code correctly
-  subroutine pf_pfasst_run(pf, q0, dt, tend, nsteps, qend, flags)
+  subroutine pf_pfasst_run(pf, q0, dt, tend, nsteps, qend, flags, join_existing, premature_exit)
     type(pf_pfasst_t), intent(inout), target   :: pf   !!  The complete PFASST structure
     class(pf_encap_t), intent(inout   )           :: q0   !!  The initial condition
     real(pfdp),        intent(inout)           :: dt   !!  The time step for each processor
@@ -28,14 +29,18 @@ contains
     integer,           intent(in   ), optional :: nsteps  !!  The number of time steps
     class(pf_encap_t), intent(inout), optional :: qend    !!  The computed solution at tend
     integer,           intent(in   ), optional :: flags(:)!!  User defnined flags
-
+    logical,           intent(in   ), optional :: join_existing  ! whether to join existing pfasst run, only relevant for dynamic mpi
+    logical,           intent(out  ), optional :: premature_exit ! whether the processor stopped earlier, only relevant for dynamic mpi
 
     !  Local variables
     integer :: nproc  !!  Total number of processors
     integer :: nsteps_loc  !!  local number of time steps
     real(pfdp) :: tend_loc !!  The final time of run
     integer :: ierr
+    logical :: je, pe ! join existing prematurte exit copies
 
+    je = .FALSE.
+    if (present(join_existing)) je = join_existing
 
     ! make a local copy of nproc
     nproc = pf%comm%nproc
@@ -62,18 +67,25 @@ contains
     call initialize_results(pf)
 
     !  do sanity checks on Nproc
-    if (mod(nsteps_loc,nproc) > 0) call pf_stop(__FILE__,__LINE__,'nsteps must be multiple of nproc ,nsteps=',nsteps_loc)
+    !  TODO: these can be very likely removed
+    if (.NOT. pf%use_dynamic_mpi) then
+        if (mod(nsteps_loc,nproc) > 0) call pf_stop(__FILE__,__LINE__,'nsteps must be multiple of nproc ,nsteps=',nsteps_loc)
+    end if
 
     !>  Try to sync everyone
-    call mpi_barrier(pf%comm%comm, ierr)
+    if (.NOT. je) call mpi_barrier(pf%comm%comm, ierr)
 
     call pf_start_timer(pf, T_TOTAL)
 
     if (present(qend)) then
-       call pf_block_run(pf, q0, dt, nsteps_loc,qend=qend,flags=flags)
+       call pf_block_run(pf, q0, dt, nsteps_loc,&
+            qend=qend, flags=flags, join_existing=je, premature_exit=pe)
     else
-       call pf_block_run(pf, q0, dt,  nsteps_loc,q0,flags=flags)
+       call pf_block_run(pf, q0, dt,  nsteps_loc,q0,&
+            flags=flags, join_existing=je, premature_exit=pe)
     end if
+
+    if (present(premature_exit)) premature_exit = pe
 
     call pf_stop_timer(pf, T_TOTAL)
     !  Output stats
@@ -325,7 +337,7 @@ contains
     call pf_check_residual(pf, level_index, residual_converged)
 
 
-    !>  Until I hear the previous processor is done, recieve it's status
+    !>  Until I hear the previous processor is done, receive its status
     if (pf%state%pstatus /= PF_STATUS_CONVERGED) call pf_recv_status(pf, send_tag)
 
     !>  Check to see if I am converged
@@ -355,10 +367,9 @@ contains
 
   end subroutine pf_check_convergence_block
 
-  !
 
   !>  PFASST controller for block mode
-  subroutine pf_block_run(pf, q0, dt, nsteps, qend,flags)
+  subroutine pf_block_run(pf, q0, dt, nsteps, qend, flags, join_existing, premature_exit)
     use pf_mod_mpi, only: MPI_REQUEST_NULL
     type(pf_pfasst_t), intent(inout), target   :: pf
     class(pf_encap_t), intent(in   )           :: q0
@@ -366,51 +377,103 @@ contains
     integer,           intent(inout)           :: nsteps
     class(pf_encap_t), intent(inout), optional :: qend
     integer,           intent(in   ), optional :: flags(:)
+    logical,           intent(in   ), optional :: join_existing  ! whether to join existing pfasst run, only relevant for dynamic mpi
+    logical,           intent(out  ), optional :: premature_exit ! whether the processor stopped earlier, only relevant for dynamic mpi
 
     class(pf_level_t), pointer :: lev  !!  pointer to the one level we are operating on
-    integer                   :: j, k
-    integer                   :: nblocks !!  The number of blocks of steps to do
-    integer                   :: nproc   !!  The number of processors being used
-    integer                   :: level_index_c !!  Coarsest level in V (Lambda)-cycle
-    integer                   :: level_max_depth !!  Finest level in V-cycle
+    integer                    :: level_index_c !!  Coarsest level in V (Lambda)-cycle
+    integer                    :: level_max_depth !!  Finest level in V-cycle
+    integer                    :: current_block, current_iteration
+
+    logical                    :: join_run
+    integer                    :: blocksize     !! current block size
+    logical                    :: first_iter
 
 
 
-    pf%state%dt      = dt
-    pf%state%proc    = pf%rank+1
-    pf%state%step    = pf%rank
-    pf%state%t0      = pf%state%step * dt
+    join_run = .FALSE.
+    if (present(join_existing)) join_run = join_existing
+    if (join_run .AND. (.NOT. pf%use_dynamic_mpi)) call pf_stop(__FILE__,__LINE__,'enable use_dynamic_mpi to be able to join existing runs')
+
+
 
     ! set finest level to visit in the following run
     pf%state%finest_level = pf%nlevels
 
-    !  pointer to finest  level to start
+    !  pointer to finest level to start
     lev => pf%levels(pf%state%finest_level)
-
-    !  Stick the initial condition into q0 (will happen on all processors)
-    call lev%q0%copy(q0, flags=0)
-
-
-    nproc = pf%comm%nproc
-    nblocks = nsteps/nproc
 
     !  Decide what the coarsest level in the V-cycle is
     level_index_c=1
     if (.not. pf%Vcycle)     level_index_c=pf%state%finest_level
 
-    do k = 1, nblocks   !  Loop over blocks of time steps
+    ! initialize variables depending on if we are joining a run or starting a new run
+    if (.NOT. join_run) then
+       !> This means we are starting a new pfasst run and need to initialize the variables
+       pf%state%steps_done = 0
+       pf%state%pfblock    = 1
+
+       !  Stick the initial condition into q0 (will happen on all processors)
+       call lev%q0%copy(q0, flags=0)
+    else
+       call pf_dynres_join_run(pf, lev%recv, lev%mpibuflen)
+       call lev%q0%unpack(lev%recv) ! unpack the received initial condition
+    end if
+
+    !> intialize other variables
+    pf%state%step       = pf%state%steps_done + pf%rank
+    pf%state%t0         = pf%state%step * dt
+    pf%state%dt         = dt
+    pf%state%proc       = pf%rank+1
+    current_block       = pf%state%pfblock ! number of current block
+    first_iter          = .TRUE. ! whether this is the first iteration or not
+
+
+
+    do while (pf%state%steps_done < nsteps)
        call pf_start_timer(pf, T_BLOCK)
 
-       ! print *,'Starting  step=',pf%state%step,'  block k=',k
+       if (.NOT. first_iter) then
+          !  Broadcast initial condition
+          !>  When starting a new block, broadcast new initial conditions to all procs
+          !>  For initial block, this is done when initial conditions are set
+          !>  block size is here the size of the previous block
+          if (blocksize > 1)  then
+             call lev%qend%pack(lev%send)    !!  Pack away your last solution
+             call pf_broadcast(pf, lev%send, lev%mpibuflen, blocksize-1)
+             call lev%q0%unpack(lev%send)    !!  Everyone resets their q0
+          else
+             call lev%q0%copy(lev%qend, flags=0)    !!  Just stick qend in q0
+          end if
+
+          ! dynamic mpi resizing
+          if (pf%use_dynamic_mpi) then
+             !call pf_dynres_submit_preference(pf) NOT IMPLEMENTED YET
+
+             call lev%q0%pack(lev%send)    !!  Everyone resets their q0
+             pf%state%pfblock = current_block
+             call pf_dynres_resize(pf, lev%send, lev%mpibuflen)
+
+             if (pf%dynres%needs_shutdown) exit ! break loop if we need to shut down
+          end if
+
+          !>  Update the step and t0 variables for new block
+          pf%state%step = pf%state%steps_done + pf%rank
+          pf%state%t0   = pf%state%step * dt
+       else
+          first_iter = .FALSE.
+       end if
+
+       ! process might need to shutdown after resource change
+
+       !> Determine the next block size
+       blocksize = min(pf%comm%nproc, nsteps - pf%state%steps_done)
+
        ! Each block will consist of
        !  0.  choose time step
        !  1.  predictor
        !  2.  Vcycle until max iterations, or tolerances met
        !  3.  Move solution to next block
-
-       !  Reset some flags
-       !>  When starting a new block, broadcast new initial conditions to all procs
-       !>  For initial block, this is done when initial conditions are set
 
        !> Reset some flags
        pf%state%iter    = -1
@@ -419,81 +482,96 @@ contains
        pf%state%status  = PF_STATUS_PREDICTOR
        pf%state%pstatus = PF_STATUS_PREDICTOR
        pf%comm%statreq  = MPI_REQUEST_NULL
-       pf%state%pfblock = k
+       pf%state%pfblock = current_block
        pf%state%sweep = 1
 
-       if (k > 1) then
-          if (nproc > 1)  then
-             call lev%qend%pack(lev%send)    !!  Pack away your last solution
-             call pf_broadcast(pf, lev%send, lev%mpibuflen, pf%comm%nproc-1)
-             call lev%q0%unpack(lev%send)    !!  Everyone resets their q0
-          else
-             call lev%q0%copy(lev%qend, flags=0)    !!  Just stick qend in q0
+
+
+       if (pf%rank >= blocksize) then
+          ! this processor is not participating in the computation
+          ! we can free it if we use dynamic mpi
+          if (pf%use_dynamic_mpi) then
+             !pf%dynres%needs_shutdown = .TRUE.
+             exit ! break loop
           end if
+       else
+          ! start the actual computation
+          if (pf%debug) print *,  'DEBUG --',pf%rank,'Starting  step=',pf%state%step,'  block k=',current_block, '  blocksize =', blocksize
 
-          !>  Update the step and t0 variables for new block
-          pf%state%step = pf%state%step + pf%comm%nproc
-          pf%state%t0   = pf%state%step * dt
-       end if
+          !> Call the predictor to get an initial guess on all levels and all processors
+          call pf_predictor(pf, pf%state%t0, dt, flags)
 
-       !> Call the predictor to get an initial guess on all levels and all processors
-       call pf_predictor(pf, pf%state%t0, dt, flags)
+          !>  Start the loops over SDC sweeps
+          pf%state%iter = 0
+          call pf_set_resid(pf,lev%index,lev%residual)
 
-       !>  Start the loops over SDC sweeps
-       pf%state%iter = 0
-       call pf_set_resid(pf,lev%index,lev%residual)
-
-       call call_hooks(pf, -1, PF_POST_ITERATION)
-
-       do j = 1, pf%niters
-
-          call pf_start_timer(pf, T_ITERATION)
-          call call_hooks(pf, -1, PF_PRE_ITERATION)
-
-          pf%state%iter = j
-
-          !  Do a V-cycle
-          if (pf%use_pySDC_V) then
-             call pf_Vcycle_pySDC(pf,k,pf%state%t0,dt,level_index_c, pf%state%finest_level)
-          else
-             call pf_Vcycle(pf, k, pf%state%t0, dt, level_index_c, pf%state%finest_level)
-          end if
-          
-
-          !  Check for convergence
-          call pf_check_convergence_block(pf, pf%state%finest_level, send_tag=1111*k+j)
           call call_hooks(pf, -1, PF_POST_ITERATION)
-          call pf_stop_timer(pf, T_ITERATION)
-          
-          !  If we are converged, exit block (can do one last sweep if desired)
-          if (pf%state%status == PF_STATUS_CONVERGED)  then
-             if (pf%sweep_at_conv) then
-                if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at convergence'
-                call pf%levels(pf%nlevels)%ulevel%sweeper%sweep(pf, pf%nlevels, pf%state%t0, dt, 1)
+
+          do current_iteration = 1, pf%niters
+             !print *,"pfasst iter"
+
+             call pf_start_timer(pf, T_ITERATION)
+             call call_hooks(pf, -1, PF_PRE_ITERATION)
+
+             pf%state%iter = current_iteration
+
+             !  Do a V-cycle
+             if (pf%use_pySDC_V) then
+                call pf_Vcycle_pySDC(pf,current_block,pf%state%t0,dt,level_index_c, pf%state%finest_level)
+             else
+                call pf_Vcycle(pf, current_block, pf%state%t0, dt, level_index_c, pf%state%finest_level)
              end if
-             call call_hooks(pf, -1, PF_POST_CONVERGENCE)
-             call pf_set_iter(pf,j) 
-             exit             
+
+
+             !  Check for convergence
+             call pf_check_convergence_block(pf, pf%state%finest_level, send_tag=1111*current_block+current_iteration)
+             call call_hooks(pf, -1, PF_POST_ITERATION)
+             call pf_stop_timer(pf, T_ITERATION)
+
+             !  If we are converged, exit block (can do one last sweep if desired)
+             if (pf%state%status == PF_STATUS_CONVERGED)  then
+                if (pf%sweep_at_conv) then
+                   if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at convergence'
+                   call pf%levels(pf%nlevels)%ulevel%sweeper%sweep(pf, pf%nlevels, pf%state%t0, dt, 1)
+                end if
+                call call_hooks(pf, -1, PF_POST_CONVERGENCE)
+                call pf_set_iter(pf,current_iteration)
+                exit
+             end if
+
+          end do  !  Loop over the iteration in this block
+
+
+          if (pf%nlevels .gt. 1) then
+             if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep after iterations on fine'
+             call pf%levels(pf%nlevels)%ulevel%sweeper%sweep(pf, pf%nlevels, pf%state%t0, dt, 1)
           end if
-
-       end do  !  Loop over the iteration in this bloc
-
-       if (pf%nlevels .gt. 1) then
-          if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep after iterations on fine'
-          call pf%levels(pf%nlevels)%ulevel%sweeper%sweep(pf, pf%nlevels, pf%state%t0, dt, 1)
        end if
+
 
        call pf_stop_timer(pf, T_BLOCK)
        call call_hooks(pf, -1, PF_POST_BLOCK)
-       
+
+       ! update counters
+       current_block = current_block + 1
+       pf%state%steps_done = pf%state%steps_done + blocksize
+       call sleep(1)
     end do !  Loop over the blocks
 
     call call_hooks(pf, -1, PF_POST_ALL)
 
-    !  Grab the last solution for return (if wanted)
-    if (present(qend)) then
-       call qend%copy(lev%qend, flags=0)
+    if ((.NOT. pf%use_dynamic_mpi) .OR. (.NOT. pf%dynres%needs_shutdown)) then
+       if (present(premature_exit)) premature_exit = .FALSE.
+       call call_hooks(pf, -1, PF_POST_ALL)
+
+       !  Grab the last solution for return (if wanted)
+       if (present(qend)) then
+          call qend%copy(lev%qend, flags=0)
+       end if
+    else
+       if (present(premature_exit)) premature_exit = .TRUE.
     end if
+
   end subroutine pf_block_run
 
 

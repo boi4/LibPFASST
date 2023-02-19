@@ -8,6 +8,7 @@
 #  that need the FFT can specify it automatically in the local Makefile
 DEBUG ?= FALSE
 MKVERBOSE ?= FALSE
+DYNRES ?= FALSE
 USE_PETSC ?= FALSE
 USE_HYPRE ?= FALSE
 USE_SUNDIALS ?= FALSE
@@ -90,6 +91,11 @@ ifdef NOMPI
   FFLAGS += -DNOMPI
 else
   FSRC += src/pf_mpi.f90
+  ifeq ($(DYNRES),TRUE)
+    FSRC += src/pf_dynres.f90
+    # JAN: make this configurable
+    FFLAGS += -I ../libmpidynres/build/include
+  endif
 endif
 
 ifdef OMP

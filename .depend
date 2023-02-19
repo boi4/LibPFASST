@@ -1,5 +1,5 @@
 ./build/pfasst.o : src/pfasst.f90 ./build/pf_mpi.o ./build/pf_stop.o ./build/pf_utils.o ./build/pf_pfasst.o ./build/pf_parallel.o ./build/pf_hooks.o ./build/pf_dtype.o 
-./build/pf_comm.o : src/pf_comm.f90 ./build/pf_pfasst.o 
+./build/pf_comm.o : src/pf_comm.f90 ./build/pf_pfasst.o  ./build/pf_dynres.o
 ./build/pf_dtype.o : src/pf_dtype.f90 
 ./build/pf_fft.o : src/pf_fft.f90 ./build/pf_utils.o ./build/pf_dtype.o 
 ./build/pf_hooks.o : src/pf_hooks.f90 ./build/pf_timer.o ./build/pf_dtype.o 
