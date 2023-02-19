@@ -9,7 +9,7 @@
 module pf_mod_misdcQ
   use pf_mod_dtype
   use pf_mod_utils
-  
+
   implicit none
 
   !>  Multi-implicit SDC sweeper type, extends abstract sweeper
@@ -22,7 +22,7 @@ module pf_mod_misdcQ
 
      class(pf_encap_t), allocatable :: I3(:)
      class(pf_encap_t), allocatable :: rhs
-   contains 
+   contains
      procedure(pf_f_eval_p), deferred :: f_eval
      procedure(pf_f_comp_p), deferred :: f_comp
      procedure :: sweep        => misdcQ_sweep
@@ -39,9 +39,9 @@ module pf_mod_misdcQ
 
   interface
      !>  This is the interface for the routine to compute the RHS function values
-     !>  Evaluate f_piece(y), where piece is one or two 
+     !>  Evaluate f_piece(y), where piece is one or two
      subroutine pf_f_eval_p(this,y, t, level_index, f, piece)
-       !>  Evaluate f_piece(y), where piece is one or two 
+       !>  Evaluate f_piece(y), where piece is one or two
        import pf_misdcQ_t, pf_encap_t, pfdp
        class(pf_misdcQ_t),  intent(inout) :: this
        class(pf_encap_t), intent(in   ) :: y        !!  Argument for evaluation
@@ -54,7 +54,7 @@ module pf_mod_misdcQ
      subroutine pf_f_comp_p(this,y, t, dtq, rhs, level_index, f, piece)
        import pf_misdcQ_t, pf_encap_t, pfdp
        class(pf_misdcQ_t),  intent(inout) :: this
-       class(pf_encap_t), intent(inout) :: y      !!  Solution of implicit solve 
+       class(pf_encap_t), intent(inout) :: y      !!  Solution of implicit solve
        real(pfdp),        intent(in   ) :: t      !!  Time of solve
        real(pfdp),        intent(in   ) :: dtq    !!  dt*quadrature weight
        class(pf_encap_t), intent(in   ) :: rhs    !!  RHS for solve
@@ -69,15 +69,15 @@ contains
   ! Perform on SDC sweep on level lev and set qend appropriately.
   subroutine misdcQ_sweep(this, pf, level_index, t0, dt, nsweeps,flags)
     use pf_mod_timer
-    use pf_mod_hooks    
+    use pf_mod_hooks
     class(pf_misdcQ_t),      intent(inout) :: this
     type(pf_pfasst_t),target,intent(inout) :: pf  !!  PFASST structure
     integer,          intent(in) :: level_index   !!  which level to sweep on
     real(pfdp),       intent(in) :: t0            !!  Time at beginning of time step
     real(pfdp),       intent(in) :: dt            !!  time step size
     integer,          intent(in) :: nsweeps       !!  number of sweeps to do
-    integer, optional, intent(in   ) :: flags    
-    !>  Local variables    
+    integer, optional, intent(in   ) :: flags
+    !>  Local variables
     integer                        :: m, n,k
     real(pfdp)                     :: t
     type(pf_level_t), pointer:: lev
@@ -91,7 +91,7 @@ contains
 
        ! compute integrals and add fas correction
        do m = 1, lev%nnodes-1
-          
+
           call lev%I(m)%setval(0.0_pfdp)
           call this%I3(m)%setval(0.0_pfdp)
           do n = 1, lev%nnodes
@@ -105,64 +105,64 @@ contains
              call lev%I(m)%axpy(1.0_pfdp, lev%tauQ(m))
           end if
        end do
-       
+
        ! do the time-stepping
        if (k .eq. 1) then
           call lev%Q(1)%copy(lev%q0)
-          call pf_start_timer(pf, T_FEVAL,level_index)          
+          call pf_start_timer(pf, T_FEVAL,level_index)
           call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,1),1)
           call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,2),2)
           call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,3),3)
-          call pf_stop_timer(pf, T_FEVAL,level_index)          
+          call pf_stop_timer(pf, T_FEVAL,level_index)
        endif
-       
+
        t = t0
        do m = 1, lev%nnodes-1
           t = t + dt*this%dtsdc(m)
-          
+
           call this%rhs%setval(0.0_pfdp)
           do n = 1, m
-             call this%rhs%axpy(dt*this%QtilE(m,n), lev%F(n,1))  
-             call this%rhs%axpy(dt*this%QtilI(m,n), lev%F(n,2))  
+             call this%rhs%axpy(dt*this%QtilE(m,n), lev%F(n,1))
+             call this%rhs%axpy(dt*this%QtilI(m,n), lev%F(n,2))
           end do
           !  Add the tau term
           call this%rhs%axpy(1.0_pfdp, lev%I(m))
           !  Add the starting value
           call this%rhs%axpy(1.0_pfdp, lev%Q(1))
-          call pf_start_timer(pf, T_FCOMP,level_index)          
+          call pf_start_timer(pf, T_FCOMP,level_index)
           call this%f_comp(lev%Q(m+1), t, dt*this%QtilI(m,m+1), this%rhs, level_index, lev%F(m+1,2),2)
-          call pf_stop_timer(pf, T_FCOMP,level_index)                    
-          
+          call pf_stop_timer(pf, T_FCOMP,level_index)
+
           !  Now we need to do the final subtraction for the f3 piece
-          call this%rhs%copy(Lev%Q(m+1))       
+          call this%rhs%copy(Lev%Q(m+1))
           do n = 1, m
-             call this%rhs%axpy(dt*this%QtilI(m,n), lev%F(n,3))  
+             call this%rhs%axpy(dt*this%QtilI(m,n), lev%F(n,3))
           end do
-          
+
           call this%rhs%axpy(-1.0_pfdp, this%I3(m))
-          call pf_start_timer(pf, T_FCOMP,level_index)                    
+          call pf_start_timer(pf, T_FCOMP,level_index)
           call this%f_comp(lev%Q(m+1), t, dt*this%QtilI(m,m+1), this%rhs, level_index, lev%F(m+1,3),3)
-          call pf_stop_timer(pf, T_FCOMP,level_index)                    
-          call pf_start_timer(pf, T_FEVAL,level_index)          
+          call pf_stop_timer(pf, T_FCOMP,level_index)
+          call pf_start_timer(pf, T_FEVAL,level_index)
           call this%f_eval(lev%Q(m+1), t, level_index, lev%F(m+1,1),1)
           call this%f_eval(lev%Q(m+1), t, level_index, lev%F(m+1,2),2)
-          call pf_stop_timer(pf, T_FEVAL,level_index)          
+          call pf_stop_timer(pf, T_FEVAL,level_index)
        end do
-       
+
        call pf_residual(pf, level_index, dt)
        call lev%qend%copy(lev%Q(lev%nnodes))
        call pf_stop_timer(pf, T_SWEEP,level_index)
-       
+
        call call_hooks(pf, level_index, PF_POST_SWEEP)
     end do  !  End loop on sweeps
 
   end subroutine misdcQ_sweep
-     
+
   ! Initialize matrices
   subroutine misdcQ_initialize(this, pf,level_index)
     class(pf_misdcQ_t), intent(inout) :: this
     type(pf_pfasst_t),  target, intent(inout) :: pf
-    integer,              intent(in)    :: level_index    
+    integer,              intent(in)    :: level_index
     integer    :: m, n, nnodes,ierr
     type(pf_level_t), pointer:: lev
     lev => pf%levels(level_index)   !  Assign level pointer
@@ -171,29 +171,29 @@ contains
 
     nnodes = lev%nnodes
     allocate(this%QdiffE(nnodes-1,nnodes),stat=ierr) ! S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
-    allocate(this%QdiffI(nnodes-1,nnodes),stat=ierr) ! S-BE 
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
+    allocate(this%QdiffI(nnodes-1,nnodes),stat=ierr) ! S-BE
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QtilE(nnodes-1,nnodes),stat=ierr) ! S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QtilI(nnodes-1,nnodes),stat=ierr) ! S-BE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%dtsdc(nnodes-1),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     this%QtilE = 0.0_pfdp
     this%QtilI = 0.0_pfdp
-    
+
         !>  Array of substep sizes
     this%dtsdc = lev%nodes(2:nnodes) - lev%nodes(1:nnodes-1)
     ! Implicit matrix
-    if (this%use_LUq) then 
+    if (this%use_LUq) then
        ! Get the LU
        this%QtilI = lev%sdcmats%qmatLU
 
-    else 
+    else
        this%QtilI = lev%sdcmats%qmatBE
     end if
-    ! Explicit matrix    
+    ! Explicit matrix
     this%QtilE=lev%sdcmats%qmatFE
 
     this%QdiffE = lev%sdcmats%qmat-this%QtilE
@@ -214,7 +214,7 @@ contains
 
     type(pf_level_t), pointer:: lev
     lev => pf%levels(level_index)   !  Assign level pointer
-    
+
     deallocate(this%QdiffE)
     deallocate(this%QdiffI)
     deallocate(this%QtilE)
@@ -234,12 +234,12 @@ contains
     class(pf_encap_t), intent(in)    :: qSDC(:), fSDC(:, :)
     real(pfdp),        intent(in)    :: dt
     class(pf_encap_t), intent(inout) :: fintSDC(:)
-    integer, optional, intent(in   ) :: flags    
+    integer, optional, intent(in   ) :: flags
 
     integer :: n, m, p
     type(pf_level_t), pointer:: lev
     lev => pf%levels(level_index)   !  Assign level pointer
-    
+
     do n = 1, lev%nnodes-1
        call fintSDC(n)%setval(0.0_pfdp)
        do m = 1, lev%nnodes
@@ -247,7 +247,7 @@ contains
              call fintSDC(n)%axpy(dt*lev%sdcmats%qmat(n,m), fSDC(m,p))
           end do
        end do
-    end do    
+    end do
   end subroutine misdcQ_integrate
 
   !> Subroutine to evaluate function value at node m
@@ -261,11 +261,11 @@ contains
 
     type(pf_level_t), pointer:: lev
     lev => pf%levels(level_index)   !  Assign level pointer
-    call pf_start_timer(pf, T_FEVAL,level_index)          
+    call pf_start_timer(pf, T_FEVAL,level_index)
     call this%f_eval(lev%Q(m), t, level_index, lev%F(m,1),1)
     call this%f_eval(lev%Q(m), t, level_index, lev%F(m,2),2)
-    call this%f_eval(lev%Q(m), t, level_index, lev%F(m,3),3)       
-    call pf_stop_timer(pf, T_FEVAL,level_index)          
+    call this%f_eval(lev%Q(m), t, level_index, lev%F(m,3),3)
+    call pf_stop_timer(pf, T_FEVAL,level_index)
   end subroutine misdcQ_evaluate
 
   !> Subroutine to evaluate the function values at all nodes

@@ -7,13 +7,13 @@ module pf_mod_results
   use pf_mod_dtype
   use pf_mod_utils
   implicit none
-  
+
 
 
 contains
   ! JAN: TODO: fix the nprocs stuff
   subroutine initialize_results(pf)
-    type(pf_pfasst_t), intent(inout) :: pf    
+    type(pf_pfasst_t), intent(inout) :: pf
 
     character(len = 128) :: datpath  !!  path to output files
     character(len = 128) :: dirname  !!  output file name for residuals
@@ -27,7 +27,7 @@ contains
     niters=pf%niters
     !nblocks=nsteps/nprocs
     max_nsweeps=max(maxval(pf%nsweeps),maxval(pf%nsweeps_pred))
-    
+
 
     !  Load up the results structure
     pf%results%nlevs=nlevs
@@ -46,23 +46,23 @@ contains
        if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)
        pf%results%errors = -1.0_pfdp
     end if
-    
+
     if(.not.allocated(pf%results%residuals) .and. pf%results%save_residuals) then
        allocate(pf%results%residuals(nlevs, nsteps,niters+1, max_nsweeps),stat=istat)
        if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)
        pf%results%residuals = -1.0_pfdp
     endif
-    
+
 
     if(.not.allocated(pf%results%delta_q0) .and. pf%results%save_delta_q0) then
        allocate(pf%results%delta_q0(nlevs,nsteps,niters+1, max_nsweeps),stat=istat)
        if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)
        pf%results%delta_q0 = -1.0_pfdp
     end if
-    
+
     if(.not.allocated(pf%results%iters)) allocate(pf%results%iters(nsteps),stat=istat)
-    if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)                   
-    pf%results%iters = niters  
+    if (istat /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',istat)
+    pf%results%iters = niters
 
     datpath= 'dat/' // trim(pf%outdir) // '/'
 
@@ -95,7 +95,7 @@ contains
        resname = trim(this%datpath) // '/residual.dat'
        rstream=5000+this%rank
        open(rstream, file=trim(resname), form='formatted',err=999)
-       write(rstream,*)'#level   step     block  iter  sweep   residual'       
+       write(rstream,*)'#level   step     block  iter  sweep   residual'
     end if
     if (this%save_errors) then
        errname = trim(this%datpath) // '/error.dat'
@@ -107,7 +107,7 @@ contains
        q0name = trim(this%datpath) // '/delta_q0.dat'
        qstream=7000+this%rank
        open(qstream, file=trim(q0name), form='formatted',err=999)
-       write(qstream,*)'#level   step     block  iter  sweep   delta q0'       
+       write(qstream,*)'#level   step     block  iter  sweep   delta q0'
     end if
     if (this%save_residuals .or. this%save_errors .or. this%save_delta_q0) then
        do klevel=1,this%nlevs
@@ -140,7 +140,7 @@ contains
     enddo
     close(istream)
     return
-    999 call pf_stop(__FILE__,__LINE__, "Error opening file")    
+    999 call pf_stop(__FILE__,__LINE__, "Error opening file")
   end subroutine dump_results
 
   subroutine dump_timingsl(this,pf)
@@ -155,7 +155,7 @@ contains
 
     !  Return if timers are off
     if (pf%save_timings .eq. 0) return
-    
+
     !  Write a json file with timer numbers and times
     fullname = trim(this%datpath) // '/runtime.json'
     iout = 4000+pf%rank !  Use processor dependent file number
@@ -175,21 +175,21 @@ contains
              write(iout,"(A24,A1,e14.6,A1)") wrap_timer_name(timer_names(k)), ':', pf%pf_timers%runtimes(k,1), ','
           else
              qarr=pf%pf_timers%runtimes(k,1:nlev)
-             strng=trim(convert_real_array(qarr,nlev))       
+             strng=trim(convert_real_array(qarr,nlev))
              write(iout,"(A24,A1,A60,A1)")  wrap_timer_name(timer_names(k)),':', adjustl(strng), ','
           end if
        end do
     end if
     write(iout,*) '"foo":"0"'
     write(iout,*) '}'
-    
+
     close(iout)
     return
-998 call pf_stop(__FILE__,__LINE__, "Error opening json file")    
+998 call pf_stop(__FILE__,__LINE__, "Error opening json file")
 
   end subroutine dump_timingsl
 
-  
+
   subroutine destroy_results(this)
     type(pf_results_t), intent(inout) :: this
     integer :: istat
@@ -198,7 +198,7 @@ contains
     if(allocated(this%residuals))  deallocate(this%residuals,stat=istat)
     if(allocated(this%delta_q0))  deallocate(this%delta_q0,stat=istat)
     if(allocated(this%iters))  deallocate(this%iters,stat=istat)
-    if (istat .ne. 0) call pf_stop(__FILE__,__LINE__, "Error deallocating arrays")        
+    if (istat .ne. 0) call pf_stop(__FILE__,__LINE__, "Error deallocating arrays")
   end subroutine destroy_results
 
 end module pf_mod_results

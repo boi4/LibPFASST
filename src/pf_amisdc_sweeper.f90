@@ -12,7 +12,7 @@ module pf_mod_amisdc
   type, extends(pf_sweeper_t), abstract :: pf_amisdc_t
      real(pfdp), allocatable :: SdiffE(:,:)
      real(pfdp), allocatable :: SdiffI(:,:)
-   contains 
+   contains
      procedure(pf_f1eval_p), deferred :: f1eval
      procedure(pf_f2eval_p), deferred :: f2eval
      procedure(pf_f2comp_p), deferred :: f2comp
@@ -28,7 +28,7 @@ module pf_mod_amisdc
      procedure :: amisdc_destroy
   end type pf_amisdc_t
 
-  interface 
+  interface
      subroutine pf_f1eval_p(this, y, t, level_index, f1)
        import pf_amisdc_t, pf_encap_t, pfdp
        class(pf_amisdc_t), intent(inout) :: this
@@ -92,7 +92,7 @@ contains
 
 
     call pf_start_timer(pf, T_SWEEP,lev%index)
-    
+
     ! compute integrals and add fas correction
     do m = 1, lev%nnodes-1
        call lev%S(m)%setval(0.0_pfdp)
@@ -125,7 +125,7 @@ contains
     dtsdc = dt * (lev%nodes(2:lev%nnodes) - lev%nodes(1:lev%nnodes-1))
     do m = 1, lev%nnodes-1
        t = t + dtsdc(m)
-             
+
        ! First compute the explicit part of the right-hand side
        call rhsA%copy(lev%Q(m))
        call rhsA%axpy(dtsdc(m), lev%F(m,1))
@@ -152,7 +152,7 @@ contains
        call this%f2eval(lev%Q(m+1), t, lev%index, lev%F(m+1,2))
        call this%f3eval(lev%Q(m+1), t, lev%index, lev%F(m+1,3))
     end do
-                         
+
     call lev%qend%copy(lev%Q(lev%nnodes))
 
     ! Destroy the temporary variables
@@ -164,7 +164,7 @@ contains
     call pf_stop_timer(pf, T_SWEEP,lev%index)
 
   end subroutine amisdc_sweep
-     
+
   ! Evaluate function values
   subroutine amisdc_evaluate(this, lev, t, m)
     use pf_mod_dtype
@@ -190,9 +190,9 @@ contains
 
     nnodes = lev%nnodes
     allocate(this%SdiffE(nnodes-1,nnodes),stat=ierr)  !  S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%SdiffI(nnodes-1,nnodes),stat=ierr)  !  S-BE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
     this%SdiffE = lev%s0mat
     this%SdiffI = lev%s0mat
@@ -208,7 +208,7 @@ contains
   subroutine amisdc_destroy(this, lev)
     class(pf_amisdc_t), intent(inout) :: this
     class(pf_level_t), intent(inout) :: lev
-    
+
     deallocate(this%SdiffE)
     deallocate(this%SdiffI)
   end subroutine amisdc_destroy
@@ -230,7 +230,7 @@ contains
              call fintSDC(n)%axpy(dt*lev%s0mat(n,m), fSDC(m,p))
           end do
        end do
-    end do    
+    end do
   end subroutine amisdc_integrate
 
   subroutine amisdc_residual(this, lev, dt)
@@ -240,7 +240,7 @@ contains
 
     call pf_generic_residual(this, lev, dt)
   end subroutine amisdc_residual
-  
+
   subroutine amisdc_evaluate_all(this, lev, t)
     class(pf_amisdc_t), intent(inout) :: this
     class(pf_level_t), intent(inout) :: lev
@@ -248,5 +248,5 @@ contains
 
     call pf_generic_evaluate_all(this, lev, t)
   end subroutine amisdc_evaluate_all
-  
+
 end module pf_mod_amisdc

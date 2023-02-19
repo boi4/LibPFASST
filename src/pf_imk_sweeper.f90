@@ -4,11 +4,11 @@
 !
 !>  Module to implement fully implicit Munthe-Kaas Runge Kutta sweeper using explicit SDC sweeping
 !! --
-!!  The equation to be solved is 
+!!  The equation to be solved is
 !!  $$ y'=A(y,t)y  $$
 !!  where \(A\) is a matrix and \(y)\ is  a vector or matrix or if Lax_pair = true
 !!  $$Y'=[A(Y,t),Y]$$ where both \(A\) and \(Y\) are matrices
-!!  This is done by solving 
+!!  This is done by solving
 !!  $$Q' = dexpinv_Q(A)$$
 !!  Using SDC sweeps
 module pf_mod_imk
@@ -39,7 +39,7 @@ module pf_mod_imk
     procedure :: destroy   => imk_destroy
     procedure :: compute_dt => imk_compute_dt
     procedure :: imk_destroy
-    procedure :: imk_initialize  
+    procedure :: imk_initialize
     procedure(pf_f_eval_p), deferred :: f_eval
     procedure(pf_dexpinv_p), deferred :: dexpinv
     procedure(pf_propagate_p), deferred :: propagate
@@ -83,7 +83,7 @@ module pf_mod_imk
        integer,    intent(in   ) :: level_index     !!  Level index
        real(pfdp),        intent(inout) :: dt       !!  time step chosen
      end subroutine pf_comp_dt_p
-     
+
   end interface
 
 contains
@@ -147,32 +147,32 @@ contains
     call call_hooks(pf, 1, PF_PRE_SWEEP)
 
     call lev%Q(1)%copy(lev%q0, flags=1)
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(1), t, level_index, this%A(1))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     ! commutator_p flags=1 hack copies Q(1)%y -> Q(1)%array
     ! all subsequent RK stages are done on Q(m)%array
     call this%commutator_p(this%A(1), lev%Q(1), lev%F(1,1), flags=1)
 
     call lev%Q(2)%axpy(1.0_pfdp, lev%Q(1))
     call lev%Q(2)%axpy(0.5_pfdp*dt, lev%F(1,1))
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(2), t, level_index, this%A(2))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     call this%commutator_p(this%A(2), lev%Q(2), lev%F(2,1))
 
     call lev%Q(3)%axpy(1.0_pfdp, lev%Q(1))
     call lev%Q(3)%axpy(0.5_pfdp*dt, lev%F(2,1))
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(3), t, level_index, this%A(3))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     call this%commutator_p(this%A(3), lev%Q(3), lev%F(3,1))
 
     call lev%Q(4)%axpy(1.0_pfdp, lev%Q(1))
     call lev%Q(4)%axpy(dt, lev%F(3,1))
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(4), t, level_index, this%A(4))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     call this%commutator_p(this%A(4), lev%Q(4), lev%F(4,1))
 
     call lev%Q(5)%axpy(1.0_pfdp, lev%Q(1))
@@ -224,30 +224,30 @@ contains
     call call_hooks(pf, 1, PF_PRE_SWEEP)
 
     call lev%Q(1)%copy(lev%q0, flags=1)
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(1), t, level_index, this%A(1))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     call this%dexpinv(this%A(1), lev%Q(1), lev%F(1,1))
 
     call lev%Q(2)%axpy(0.5_pfdp*dt, lev%F(1,1))
     call this%propagate(lev%q0, lev%Q(2))
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(2), t, level_index, this%A(2))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     call this%dexpinv(this%A(2), lev%Q(2), lev%F(2,1))
 
     call lev%Q(3)%axpy(0.5_pfdp*dt, lev%F(2,1))
     call this%propagate(lev%q0, lev%Q(3))
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(3), t, level_index, this%A(3))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     call this%dexpinv(this%A(3), lev%Q(3), lev%F(3,1))
 
     call lev%Q(4)%axpy(dt, lev%F(3,1))
     call this%propagate(lev%q0, lev%Q(4))
-    call pf_start_timer(pf,T_FEVAL,level_index)       
+    call pf_start_timer(pf,T_FEVAL,level_index)
     call this%f_eval(lev%Q(4), t, level_index, this%A(4))
-    call pf_stop_timer(pf,T_FEVAL,level_index)       
+    call pf_stop_timer(pf,T_FEVAL,level_index)
     call this%dexpinv(this%A(4), lev%Q(4), lev%F(4,1))
 
     call lev%Q(5)%axpy(dt/6.0_pfdp, lev%F(1,1))
@@ -342,13 +342,13 @@ contains
     nnodes = lev%nnodes
 
     allocate(this%QdiffE(nnodes-1,nnodes),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)           
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QtilE(nnodes-1,nnodes),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)           
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%dtsdc(nnodes-1),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)           
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%tsdc(nnodes),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)              
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
 
     this%dtsdc = lev%nodes(2:nnodes) - lev%nodes(1:nnodes-1)
@@ -427,32 +427,32 @@ contains
        end do
 
        call lev%Q(1)%copy(lev%q0, flags=1)
-       call pf_start_timer(pf,T_FEVAL,level_index)       
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(1), t, level_index, this%A(1))
-       call pf_stop_timer(pf,T_FEVAL,level_index)       
+       call pf_stop_timer(pf,T_FEVAL,level_index)
        ! commutator_p flags=1 hack copies Q(1)%y -> Q(1)%array
        ! all subsequent RK stages are done on Q(m)%array
        call this%commutator_p(this%A(1), lev%Q(1), lev%F(1,1), flags=1)
 
        call lev%Q(2)%axpy(1.0_pfdp, lev%Q(1))
        call lev%Q(2)%axpy(0.5_pfdp*dt, lev%F(1,1))
-       call pf_start_timer(pf,T_FEVAL,level_index)       
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(2), t, level_index, this%A(2))
-       call pf_stop_timer(pf,T_FEVAL,level_index)       
+       call pf_stop_timer(pf,T_FEVAL,level_index)
        call this%commutator_p(this%A(2), lev%Q(2), lev%F(2,1))
 
        call lev%Q(3)%axpy(1.0_pfdp, lev%Q(1))
        call lev%Q(3)%axpy(0.5_pfdp*dt, lev%F(2,1))
-       call pf_start_timer(pf,T_FEVAL,level_index)       
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(3), t, level_index, this%A(3))
-       call pf_stop_timer(pf,T_FEVAL,level_index)       
+       call pf_stop_timer(pf,T_FEVAL,level_index)
        call this%commutator_p(this%A(3), lev%Q(3), lev%F(3,1))
 
        call lev%Q(4)%axpy(1.0_pfdp, lev%Q(1))
        call lev%Q(4)%axpy(dt, lev%F(3,1))
-       call pf_start_timer(pf,T_FEVAL,level_index)       
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(4), t, level_index, this%A(4))
-       call pf_stop_timer(pf,T_FEVAL,level_index)       
+       call pf_stop_timer(pf,T_FEVAL,level_index)
        call this%commutator_p(this%A(4), lev%Q(4), lev%F(4,1))
 
        call lev%Q(5)%axpy(1.0_pfdp, lev%Q(1))
@@ -484,9 +484,9 @@ contains
        if (this%debug) call lev%Q(m)%eprint()
 
        !  Compute A(y,t)
-       call pf_start_timer(pf,T_FEVAL,level_index)       
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(m), t, level_index, this%A(m))
-       call pf_stop_timer(pf,T_FEVAL,level_index)       
+       call pf_stop_timer(pf,T_FEVAL,level_index)
        if (this%debug) print*, 'A'
        if (this%debug) call this%A(m)%eprint()
 
@@ -531,7 +531,7 @@ contains
     integer :: m
 
     type(pf_level_t), pointer :: lev
-    lev => pf%levels(level_index)   !  Assign level pointer    
+    lev => pf%levels(level_index)   !  Assign level pointer
     call lev%ulevel%sweeper%integrate(pf,level_index, lev%Q, lev%F, dt, lev%I)
 
     ! add tau (which is 'node to node')

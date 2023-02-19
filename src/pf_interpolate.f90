@@ -12,7 +12,7 @@ module pf_mod_interpolate
 contains
 
   !> Subroutine to interpolate (in time and space) level_index-1 to level_index
-  !! Interpolation is done by interpolating increments.  
+  !! Interpolation is done by interpolating increments.
   !! The fine function values are re-evaluated after interpolation.
   subroutine interpolate_time_space(pf, t0, dt, level_index, F_INTERP, flags)
     type(pf_pfasst_t), intent(inout),target :: pf      !! main pfasst structure
@@ -36,21 +36,21 @@ contains
 
     call call_hooks(pf, level_index, PF_PRE_INTERP_ALL)
     call pf_start_timer(pf, T_INTERPOLATE,level_index)
-    
-    
+
+
     step = pf%state%step+1
 
     !> create workspaces
-    if (f_lev%interp_workspace_allocated   .eqv. .false.) then  
+    if (f_lev%interp_workspace_allocated   .eqv. .false.) then
        call c_lev%ulevel%factory%create_array(f_lev%c_delta,  c_lev%nnodes, c_lev%index,  c_lev%lev_shape)
        call f_lev%ulevel%factory%create_array(f_lev%cf_delta, c_lev%nnodes, f_lev%index,  f_lev%lev_shape)
-       f_lev%interp_workspace_allocated  = .true.     
+       f_lev%interp_workspace_allocated  = .true.
     end if
     !> set time at coarse and fine nodes
     allocate(c_times(c_lev%nnodes),stat=ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(f_times(f_lev%nnodes),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
     c_times = t0 + dt*c_lev%nodes
     f_times = t0 + dt*f_lev%nodes
@@ -94,7 +94,7 @@ contains
                 end if
              end do
           end do
-             
+
        end do !  Loop on npieces
     else    ! recompute function values
        call f_lev%ulevel%sweeper%evaluate_all(pf,level_index, f_times, flags=flags, step=step)
@@ -125,12 +125,12 @@ contains
 
     call c_lev%delta_q0%setval(0.0_pfdp,flags)
     call f_lev%delta_q0%setval(0.0_pfdp,flags)
-    
+
 
     !>  restrict fine initial data to coarse
     call f_lev%ulevel%restrict(f_lev, c_lev, f_lev%q0, c_lev%delta_q0, pf%state%t0, flags)
     !>  get coarse level correction
-    call c_lev%delta_q0%axpy(-1.0_pfdp, c_lev%q0, flags)    
+    call c_lev%delta_q0%axpy(-1.0_pfdp, c_lev%q0, flags)
     !>  interpolate correction in space
     call f_lev%ulevel%interpolate(f_lev, c_lev, f_lev%delta_q0, c_lev%delta_q0, pf%state%t0, flags)
     !> update fine inital condition
@@ -140,25 +140,25 @@ contains
     call call_hooks(pf, f_lev%index, PF_POST_INTERP_Q0)
 
   end subroutine interpolate_q0
-  
+
     !>  Subroutine to update the fine terminal condition from coarse increment by spatial interpolation
     !>  used for adjoint solver
   subroutine interpolate_qend(pf, f_lev, c_lev)
-  
+
     type(pf_pfasst_t), intent(inout) :: pf          !!  main pfasst structure
     class(pf_level_t),  intent(inout) :: f_lev  !!  fine level
     class(pf_level_t),  intent(inout) :: c_lev  !!  coarse level
-    
+
     call call_hooks(pf, f_lev%index, PF_PRE_INTERP_Q0)
     call pf_start_timer(pf, T_INTERPOLATE, f_lev%index)
-    
+
     call c_lev%delta_q0%setval(0.0_pfdp)
     call f_lev%delta_q0%setval(0.0_pfdp)
 
     !>  restrict fine initial data to coarse
     call f_lev%ulevel%restrict(f_lev, c_lev, f_lev%qend, c_lev%delta_q0, pf%state%t0, flags=2)
     !>  get coarse level correction
-    call c_lev%delta_q0%axpy(-1.0_pfdp, c_lev%qend, flags=2)    
+    call c_lev%delta_q0%axpy(-1.0_pfdp, c_lev%qend, flags=2)
 
     !>  interpolate correction in space
     call f_lev%ulevel%interpolate(f_lev, c_lev, f_lev%delta_q0, c_lev%delta_q0, pf%state%t0, flags=2)

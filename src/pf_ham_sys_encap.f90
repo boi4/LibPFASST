@@ -8,7 +8,7 @@
 !! of size (ndim,nparticles) corresponding to the two components (p,q) in the Hamiltonian particles system
 !!
 !! The helper routines get_array can be used to
-!! extract pointers to the different components of the system array 
+!! extract pointers to the different components of the system array
 !! performing any copies.
 !!
 module pf_mod_ham_sys
@@ -30,7 +30,7 @@ module pf_mod_ham_sys
      integer             :: ndim        !  spatial dimension
      integer             :: nparticles  !  number of grid points or grid points per dimension
      integer             :: ndof   !  ndim*nparticles
-     real(pfdp), pointer :: p(:,:),q(:,:) !  pointers to (p,q) solution     
+     real(pfdp), pointer :: p(:,:),q(:,:) !  pointers to (p,q) solution
      real(pfdp), allocatable :: flatarray(:)  !  of size 2*ndim*nparticles or 2*ndof
    contains
      procedure :: setval => ham_sys_setval
@@ -66,9 +66,9 @@ contains
 
        allocate(q%flatarray(2*q%ndof))
        q%flatarray=0.0_pfdp
-       
+
        q%p(1:q%ndim,1:q%nparticles) => q%flatarray(1:q%ndof)
-       q%q(1:q%ndim,1:q%nparticles) => q%flatarray(q%ndof+1:2*q%ndof)              
+       q%q(1:q%ndim,1:q%nparticles) => q%flatarray(q%ndof+1:2*q%ndof)
     end select
   end subroutine ham_sys_build
 
@@ -151,7 +151,7 @@ contains
     else
        icomp = 0
     end if
-    
+
     select case (icomp)
     case(0)
        this%flatarray = val
@@ -162,7 +162,7 @@ contains
     case default
        stop "bad flags"
     end select
-    
+
   end subroutine ham_sys_setval
 
   !> Subroutine to copy an array
@@ -187,7 +187,7 @@ contains
        case(1)
           this%p =  src%p
        case(2)
-          this%q =  src%q          
+          this%q =  src%q
        case default
           stop "bad flags"
        end select
@@ -243,13 +243,13 @@ contains
        case(1)
           this%p = a * x%p + this%p
        case(2)
-          this%q = a * x%q + this%q          
+          this%q = a * x%q + this%q
        case(12)
           this%q = a * x%p + this%q
        case default
           stop "bad flags"
        end select
-    class default       
+    class default
        stop "TYPE ERROR"
     end select
   end subroutine ham_sys_axpy
@@ -264,14 +264,14 @@ contains
     !  Just print the first few values
     n=min(10,this%nparticles)
     print *,'p=', this%p(1:this%ndim,1:n)
-    print *,'q=', this%q(1:this%ndim,1:n)    
+    print *,'q=', this%q(1:this%ndim,1:n)
 
   end subroutine ham_sys_eprint
 
   function cast_as_ham_sys(encap_polymorph) result(ham_sys_obj)
     class(pf_encap_t), intent(in), target :: encap_polymorph
     type(pf_ham_sys_t), pointer :: ham_sys_obj
-    
+
     select type(encap_polymorph)
     type is (pf_ham_sys_t)
        ham_sys_obj => encap_polymorph

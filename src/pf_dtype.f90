@@ -7,7 +7,7 @@ module pf_mod_dtype
   use iso_c_binding
   implicit none
 
-  
+
   !>  pfasst static  paramters
   integer, parameter :: pfdp = selected_real_kind(15, 307)  !!  Defines double precision type for all real and complex variables
 !  integer, parameter :: pfdp = selected_real_kind(33, 4931)  !! For quad precision everywhere (use at your risk and see top of pf_mpi.f90)
@@ -18,7 +18,7 @@ module pf_mod_dtype
   real(pfdp), parameter :: THREE  = 3.0_pfdp
   real(pfdp), parameter :: HALF  = 0.5_pfdp
   complex(pfdp), parameter :: ZI  = cmplx(0.0,1.0,pfdp)
-  complex(pfdp), parameter :: Z0  = cmplx(0.0,0.0,pfdp)  
+  complex(pfdp), parameter :: Z0  = cmplx(0.0,0.0,pfdp)
   real(pfqp),parameter ::  qpi = 3.1415926535897932384626433832795_pfqp
   real(pfdp),parameter ::  two_pi = 2.0_pfqp*qpi
   integer, parameter :: PF_MAXLEVS = 4
@@ -43,7 +43,7 @@ module pf_mod_dtype
      real(pfdp) :: timers(PF_NUM_TIMERS,PF_MAXLEVS)=0.0d0
      real(pfdp) :: runtimes(PF_NUM_TIMERS,PF_MAXLEVS)=0.0d0
   end type pf_timer_t
-  
+
   !>  The type that holds the state of the system
   type, bind(c) :: pf_state_t
     real(pfdp) :: t0  !!  Time at beginning of this time step
@@ -92,7 +92,7 @@ module pf_mod_dtype
      integer     :: npieces !  Number of pieces of rhs
      integer     :: order   !  Method order
      integer     :: nsteps  !  Number of steps per big time step
-     
+
    contains
      procedure(pf_do_n_steps_p),           deferred :: do_n_steps
      procedure(pf_initialize_stepper_p),   deferred :: initialize
@@ -206,7 +206,7 @@ module pf_mod_dtype
           cf_delta(:), &   ! delta fine in space and coarse in time
           c_delta(:), &    ! delta on the coarse level
           f_encap_array_c(:)  !  fine solution restricted in space only
-     
+
      integer, allocatable :: lev_shape(:)   !! user defined shape array
      type(pf_sdcmats_t), allocatable :: sdcmats
      logical :: allocated = .false.
@@ -262,7 +262,7 @@ module pf_mod_dtype
      integer :: nlevs
      integer :: nsteps
      integer :: niters  !  really the max niters
-     integer :: nprocs  
+     integer :: nprocs
      integer :: nblocks
      integer :: max_nsweeps  !  max nsweeps for allocation
      integer :: rank
@@ -272,7 +272,7 @@ module pf_mod_dtype
      logical :: save_delta_q0
 
      character(len=128) :: datpath
-     procedure(pf_results_p), pointer, nopass :: destroy 
+     procedure(pf_results_p), pointer, nopass :: destroy
   end type pf_results_t
 
   !>  The main PFASST data type which includes pretty much everything
@@ -318,7 +318,7 @@ module pf_mod_dtype
 
 
      ! -- RK and Parareal options
-     logical :: use_sdc_sweeper =.true.   !! decides if SDC sweeper is used 
+     logical :: use_sdc_sweeper =.true.   !! decides if SDC sweeper is used
      logical :: use_rk_stepper = .false.  !! decides if RK steps are used instead of the sweeps
      integer :: nsteps_rk(PF_MAXLEVS)=-1  !! number of runge-kutta steps per time step
      integer :: rk_order(PF_MAXLEVS)=-1   !! order of runge-kutta method per level
@@ -331,7 +331,7 @@ module pf_mod_dtype
      ! -- misc
      logical :: debug = .false.         !!  If true, debug diagnostics are printed
 
-     ! -- controller for the results 
+     ! -- controller for the results
      logical :: save_residuals = .true.  !!  Will save residuals every time they are set
      logical :: save_delta_q0 = .true.   !!  Will save change in initial condition
      logical :: save_errors  = .true.    !!  Will save errors, but set_error must be called externally

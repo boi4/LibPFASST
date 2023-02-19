@@ -50,7 +50,7 @@ module pf_mod_hooks
        'pre-restrict-all   ',  &
        'post-restrict-all  ',  &
        'pre-convergence    ',  &
-       'post-convergence   ',  & 
+       'post-convergence   ',  &
        'post-all           ' /)
 
 contains
@@ -106,14 +106,14 @@ contains
     end if
 
 
-    
+
   end subroutine call_hooks
 
   !>  Subroutine defining log hook
   subroutine pf_logger_hook(pf, level_index)
     type(pf_pfasst_t), intent(inout) :: pf
     integer, intent(in) :: level_index
-    
+
     print '("PF:: trank: ",i4,", step: ",i6,", iter: ",i3,", level: ",i2," location: ",a)', &
          pf%rank, pf%state%step, pf%state%iter, level_index, hook_names(pf%state%hook)
   end subroutine pf_logger_hook
@@ -121,13 +121,13 @@ contains
   !>  Subroutine to add log hook
   subroutine pf_logger_attach(pf)
     type(pf_pfasst_t), intent(inout) :: pf
-    
+
     integer :: l, h
-    
+
     do h = PF_HOOK_LOG_ONE, PF_HOOK_LOG_ALL-1
        call pf_add_hook(pf, 1, h, pf_logger_hook)
     end do
-    
+
     do l = 1, pf%nlevels
        do h = PF_HOOK_LOG_ALL, PF_HOOK_LOG_LAST
           call pf_add_hook(pf, l, h, pf_logger_hook)

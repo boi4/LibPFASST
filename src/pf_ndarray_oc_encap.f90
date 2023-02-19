@@ -31,12 +31,12 @@ module pf_mod_ndarray_oc
      procedure :: destroy_array  => ndarray_oc_destroy_array
   end type pf_ndarray_oc_factory_t
 
-  !>  N-dimensional array type for optimal control,  extends the abstract encap type  
+  !>  N-dimensional array type for optimal control,  extends the abstract encap type
   type, extends(pf_encap_t) :: pf_ndarray_oc_t
      integer                 :: ndim
-     integer,    allocatable :: arr_shape(:)    
+     integer,    allocatable :: arr_shape(:)
      real(pfdp), allocatable :: yflatarray(:)
-     real(pfdp), allocatable :: pflatarray(:) 
+     real(pfdp), allocatable :: pflatarray(:)
 
    contains
      procedure :: setval => ndarray_oc_setval
@@ -91,7 +91,7 @@ contains
     integer :: ierr
     allocate(pf_ndarray_oc_t::x,stat=ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
-    
+
     call ndarray_oc_build(x, lev_shape)
   end subroutine ndarray_oc_create_single
 
@@ -105,12 +105,12 @@ contains
     integer :: i,ierr
     allocate(pf_ndarray_oc_t::x(n),stat=ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
-    
+
     do i = 1, n
        call ndarray_oc_build(x(i), lev_shape)
     end do
   end subroutine ndarray_oc_create_array
-  
+
   !>  Subroutine to destroy array
   subroutine ndarray_oc_destroy(encap)
     class(pf_encap_t), intent(inout) :: encap
@@ -128,7 +128,7 @@ contains
   subroutine ndarray_oc_destroy_single(this, x)
     class(pf_ndarray_oc_factory_t), intent(inout)              :: this
     class(pf_encap_t),         intent(inout), allocatable :: x
-    
+
     select type (x)
     class is (pf_ndarray_oc_t)
        deallocate(x%pflatarray)
@@ -139,13 +139,13 @@ contains
     end select
     deallocate(x)
   end subroutine ndarray_oc_destroy_single
-  
+
     !> Subroutine to destroy an array of arrays
   subroutine ndarray_oc_destroy_array(this, x)
     class(pf_ndarray_oc_factory_t), intent(inout)              :: this
     class(pf_encap_t),      intent(inout), allocatable :: x(:)
     integer                                            :: i
-    
+
     select type(x)
     class is (pf_ndarray_oc_t)
        do i = 1,SIZE(x)
@@ -158,8 +158,8 @@ contains
     end select
     deallocate(x)
   end subroutine ndarray_oc_destroy_array
-  
-  
+
+
   !> Subroutine to set array to a scalar  value.
   subroutine ndarray_oc_setval(this, val, flags)
     class(pf_ndarray_oc_t), intent(inout)     :: this
@@ -195,7 +195,7 @@ contains
     which = 0
     if (present(flags)) which = flags
 !     if(.not.present(flags)) print *, "copy without flags"
-    
+
     select type(src)
     type is (pf_ndarray_oc_t)
       select case (which)
@@ -220,13 +220,13 @@ contains
     real(pfdp),  intent(  out)       :: z(:)
     integer,     intent(in   ), optional   :: flags
     integer :: which
-    
+
     which = 0
     if (present(flags)) which = flags
 
     select case (which)
     case (0)
-       !z = [sol%yflatarray, sol%pflatarray] 
+       !z = [sol%yflatarray, sol%pflatarray]
        !z has to be right size? initialized to nvars, so it can hold either y or p
        !is it ever needed to pack y and p simultaneously?
        call pf_stop(__FILE__,__LINE__,'ndarray_oc_pack: only 1, 2 allowed as flags, which=',which)
@@ -255,12 +255,12 @@ contains
     case (1)
        this%yflatarray = z
     case (2)
-       this%pflatarray = z 
+       this%pflatarray = z
     case DEFAULT
        call pf_stop(__FILE__,__LINE__,'Bad case in SELECT',which)
     end select
   end subroutine ndarray_oc_unpack
-  
+
 
   !> Subroutine to define the norm of the array (here the max norm)
   function ndarray_oc_norm(this, flags) result (norm)
@@ -272,14 +272,14 @@ contains
     which = 0
     if (present(flags)) which = flags
     if(.not.present(flags)) print *, "norm without flags"
-    
+
     select case (which)
     case (0)
        norm = max(maxval(abs(this%yflatarray)), maxval(abs(this%pflatarray)))
     case (1)
        norm = maxval(abs(this%yflatarray))
     case (2)
-       norm = maxval(abs(this%pflatarray))  
+       norm = maxval(abs(this%pflatarray))
     case DEFAULT
        call pf_stop(__FILE__,__LINE__,'Bad case in SELECT',which)
     end select
@@ -287,7 +287,7 @@ contains
 
   !> Subroutine to compute y = a x + y where a is a scalar and x and y are arrays
   subroutine ndarray_oc_axpy(this, a, x, flags)
-    class(pf_ndarray_oc_t), intent(inout) :: this    
+    class(pf_ndarray_oc_t), intent(inout) :: this
     class(pf_encap_t), intent(in   )     :: x
     real(pfdp),  intent(in   )           :: a
     integer,     intent(in   ), optional :: flags
@@ -296,8 +296,8 @@ contains
     if (a .eq. 0.0_pfdp) return
     which = 0
     if (present(flags)) which = flags
-!     if (.not.present(flags)) stop "axpy without flags" 
-    
+!     if (.not.present(flags)) stop "axpy without flags"
+
     select type(x)
     type is (pf_ndarray_oc_t)
       select case (which)
@@ -313,15 +313,15 @@ contains
       end select
     class DEFAULT
        call pf_stop(__FILE__,__LINE__,'Type error')
-    end select  
+    end select
   end subroutine ndarray_oc_axpy
 
-  
+
 
   function cast_as_ndarray_oc(encap_polymorph) result(ndarray_oc_obj)
     class(pf_encap_t), intent(in), target :: encap_polymorph
     type(pf_ndarray_oc_t), pointer :: ndarray_oc_obj
-    
+
     select type(encap_polymorph)
     type is (pf_ndarray_oc_t)
        ndarray_oc_obj => encap_polymorph
@@ -330,7 +330,7 @@ contains
     end select
   end function cast_as_ndarray_oc
 
-  
+
   function get_array1d_oc(x, flags) result(r)
     class(pf_encap_t), target, intent(in) :: x
     integer,     intent(in   ), optional :: flags
@@ -340,7 +340,7 @@ contains
     which = 0
     if (present(flags)) which = flags
 !     if(.not.present(flags)) print *, "array1d_oc without flags"
-    
+
     select type (x)
     type is (pf_ndarray_oc_t)
       select case (which)
@@ -356,7 +356,7 @@ contains
     end select
   end function get_array1d_oc
 
-  
+
   function get_array2d_oc(x, flags) result(r)
     class(pf_encap_t), intent(in),target :: x
     integer,     intent(in   ), optional :: flags
@@ -366,7 +366,7 @@ contains
     which = 0
     if (present(flags)) which = flags
 !     if(.not.present(flags)) print *, "array2d_oc without flags"
-    
+
     select type (x)
     type is (pf_ndarray_oc_t)
       select case (which)
@@ -375,13 +375,13 @@ contains
         case (2)
           r(1:x%arr_shape(1),1:x%arr_shape(2)) => x%pflatarray
        case DEFAULT
-          call pf_stop(__FILE__,__LINE__,'gerarray2d: only 1, 2 allowed as flags, which=',which)          
+          call pf_stop(__FILE__,__LINE__,'gerarray2d: only 1, 2 allowed as flags, which=',which)
        end select
     class DEFAULT
        call pf_stop(__FILE__,__LINE__,'Type error')
     end select
   end function get_array2d_oc
-  
+
   function get_array3d_oc(x, flags) result(r)
     class(pf_encap_t), intent(in),target :: x
     integer,     intent(in   ), optional :: flags
@@ -398,14 +398,14 @@ contains
         case (2)
           r(1:x%arr_shape(1),1:x%arr_shape(2),1:x%arr_shape(3)) => x%pflatarray
         case DEFAULT
-          call pf_stop(__FILE__,__LINE__,'gerarray3d: only 1, 2 allowed as flags, which=',which)          
+          call pf_stop(__FILE__,__LINE__,'gerarray3d: only 1, 2 allowed as flags, which=',which)
        end select
     class DEFAULT
        call pf_stop(__FILE__,__LINE__,'Type error')
     end select
   end function get_array3d_oc
-  
-  
+
+
   subroutine ndarray_oc_dump_hook(pf, level_index)
     type(pf_pfasst_t),   intent(inout) :: pf
     integer,             intent(in)    :: level_index
@@ -414,7 +414,7 @@ contains
     type(pf_ndarray_oc_t), pointer :: qend
 
     qend => cast_as_ndarray_oc(pf%levels(level_index)%qend)
-    
+
     write(fnamey, "('y_s',i0.2,'i',i0.3,'l',i0.2,'.npy')") &
          pf%state%step, pf%state%iter, level_index
 
@@ -432,14 +432,14 @@ contains
 !         qend%ndim, qend%arr_shape, SIZE(qend%pflatarray), qend%pflatarray)
   end subroutine ndarray_oc_dump_hook
 
-  
+
   subroutine ndarray_oc_dump_all_hook(pf, level_index)
     type(pf_pfasst_t),   intent(inout) :: pf
     integer,             intent(in)    :: level_index
 
     character(len=256)     :: fnamey, fnamep
     integer                :: m
-    
+
     type(pf_ndarray_oc_t), pointer :: qend
 
     do m=1, pf%levels(level_index)%nnodes
@@ -457,11 +457,11 @@ contains
 
   end subroutine ndarray_oc_dump_all_hook
 
-  
+
     !>  Subroutine to print the array to the screen (mainly for debugging purposes)
   subroutine ndarray_oc_eprint(this,flags)
     class(pf_ndarray_oc_t), intent(inout) :: this
-    integer,     intent(in   ), optional :: flags    
+    integer,     intent(in   ), optional :: flags
     !  Just print the first few values
     print *, this%yflatarray(1:10)
     print *, this%pflatarray(1:10)

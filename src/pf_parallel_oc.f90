@@ -87,7 +87,7 @@ contains
           !  Send forward/backward
 !          if (dir == 1) send_tag = 100000+pf%rank+1
           !          if (dir == 2) send_tag = 100000+pf%rank-1
-          send_tag = 100000+pf%rank+dir          
+          send_tag = 100000+pf%rank+dir
           call pf_send(pf, c_lev, send_tag, .false., dir=dir,which=which)
        else  !  Normal PFASST burn in
           burnin_sweeps = pf%rank+1
@@ -153,7 +153,7 @@ contains
           !  Send forward/backward
 !          if (dir == 1) send_tag = c_lev%index*1110000+pf%rank+1+k
           !          if (dir == 2) send_tag = c_lev%index*1110000+pf%rank-1+k
-          send_tag = c_lev%index*1110000+pf%rank+dir+k          
+          send_tag = c_lev%index*1110000+pf%rank+dir+k
           call pf_send(pf, c_lev, send_tag, .false., dir=dir,which=which)
        end do ! k = 1, c_lev%nsweeps_pred-1
       else  !  Don't pipeline
@@ -280,7 +280,7 @@ contains
     !> Check to see if tolerances are met
     call pf_check_residual_oc(pf, level_index, residual_converged)
 
-    !>  Until I hear the previous processor is done, recieve it's status
+    !>  Until I hear the previous processor is done, receive its status
     if (pf%state%pstatus /= PF_STATUS_CONVERGED) call pf_recv_status(pf, send_tag, dir=dir)
 
     !>  Check to see if I am converged
@@ -407,12 +407,12 @@ contains
          call call_hooks(pf, -1, PF_POST_CONVERGENCE)
          exit
       end if
-      
+
     end do  !  Loop over the iteration in this block
     pf%state%itcnt = pf%state%itcnt + pf%state%iter
     call call_hooks(pf, -1, PF_POST_BLOCK)
 
-    
+
     call pf_stop_timer(pf, T_TOTAL)
     ! call dump_results(pf%results)
     call dump_timingsl(pf%results,pf)
@@ -443,7 +443,7 @@ contains
     do level_index = level_index_c+1, level_index_f
        f_lev => pf%levels(level_index)
        call pf_post(pf, f_lev, f_lev%index*10000+iteration, dir=dir)
-       !call pf_post(pf, f_lev, f_lev%index*10000+iteration, dir)       
+       !call pf_post(pf, f_lev, f_lev%index*10000+iteration, dir)
     end do
 
     !> move from fine to coarse doing sweeps

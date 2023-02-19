@@ -11,17 +11,17 @@ module pf_mod_quadrature
 
   implicit none
 
-  integer,  parameter :: qp = c_long_double   
+  integer,  parameter :: qp = c_long_double
   integer,  parameter :: dp = c_double
   real(qp), parameter :: eps = 1.0e-23_qp
-  
+
   private :: qsort_partition
 
   interface poly_eval
      module procedure poly_eval
      module procedure poly_eval_complex
   end interface
-  
+
 contains
   !>  Initialize the sdcmats type with the correct nodes and quadrature matrices
   subroutine pf_init_sdcmats(pf,SDCmats,nnodes,nflags)
@@ -70,17 +70,17 @@ contains
     type(pf_sdcmats_t), intent(inout) :: SDCmats
 
 
-     deallocate(SDCmats%Qmat)  
-     deallocate(SDCmats%QmatFE)  
-     deallocate(SDCmats%QmatBE)  
-     deallocate(SDCmats%QmatTrap)  
-     deallocate(SDCmats%QmatVer)  
-     deallocate(SDCmats%QmatLU)  
-     deallocate(SDCmats%Smat)  
-     deallocate(SDCmats%qnodes)       
+     deallocate(SDCmats%Qmat)
+     deallocate(SDCmats%QmatFE)
+     deallocate(SDCmats%QmatBE)
+     deallocate(SDCmats%QmatTrap)
+     deallocate(SDCmats%QmatVer)
+     deallocate(SDCmats%QmatLU)
+     deallocate(SDCmats%Smat)
+     deallocate(SDCmats%qnodes)
   end subroutine pf_destroy_sdcmats
-  
-    
+
+
   !>  Routine to compute the LU decomposition of spectral integration matrix
   subroutine myLUq(Q,QLU,Nnodes,fillq)
     integer,        intent (in)     :: Nnodes
@@ -97,7 +97,7 @@ contains
     real(pfdp)  :: U(Nnodes-1,Nnodes-1)
     real(pfdp)  :: L(Nnodes-1,Nnodes-1)
     real(pfdp)  :: LUerror
-    
+
     L = 0.0_pfdp
     U = 0.0_pfdp
     N = Nnodes-1
@@ -147,7 +147,7 @@ contains
     real(pfdp) :: dt  !  The size of the composite base rule
     real(pfqp) :: qnodes0(nnodes0)  ! quad precision base nodes
     real(pfqp) ::  qnodes(nnodes)   ! quad precision nodes
-    real(pfdp) ::  Qmat0(nnodes0-1,nnodes0), Smat0(nnodes0-1,nnodes0),qcomp0(nnodes0-1,nnodes0)    
+    real(pfdp) ::  Qmat0(nnodes0-1,nnodes0), Smat0(nnodes0-1,nnodes0),qcomp0(nnodes0-1,nnodes0)
     integer    :: flags0(nnodes0)
 
     integer :: i,j, ri,rj, refine,m
@@ -170,7 +170,7 @@ contains
 
        !  This block matrix will be used to fill in composite Qmat
        do m=1,nnodes0-1
-          qcomp0(m,:)=Qmat0(nnodes0-1,:)  !  load each row with the integral over the whole composite step    
+          qcomp0(m,:)=Qmat0(nnodes0-1,:)  !  load each row with the integral over the whole composite step
        end do
 
        !  Build big block matrix
@@ -233,7 +233,7 @@ contains
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__, "allocate error QmatBE")
     allocate(SDCmats%QmatLU(nnodes-1,nnodes),stat=ierr)
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__, "allocate error QmatLU")
-    
+
     !  Make implicit Euler matrices
     SDCmats%QmatBE=0.0_pfdp
     do m = 1, nnodes-1
@@ -252,11 +252,11 @@ contains
     !  Trapezoid matrix
     SDCmats%QmatTrap=0.5_pfdp*(SDCmats%QmatFE+SDCmats%QmatBE)
 
-    !  Get the LU 
+    !  Get the LU
     call myLUq(SDCmats%Qmat,SDCmats%QmatLU,nnodes,0)
 
    end subroutine pf_make_matrices
-   
+
   !>  Function to decide if the restriction of the nodes is pointwise, e.g. coarse nodes are every other fine node
   logical function not_proper(flags, node)
     integer , intent(in) :: flags(:)
@@ -288,9 +288,9 @@ contains
 
        degree = nnodes-2
        allocate(roots(degree),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
        allocate(coeffs(degree+1),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
        call poly_legendre(coeffs, degree)
        call poly_roots(roots, coeffs, degree)
@@ -307,7 +307,7 @@ contains
        end do
 
     case (SDC_GAUSS_LOBATTO)
-       
+
        degree = nnodes - 1
        allocate(roots(degree-1),stat=ierr)
 
@@ -380,7 +380,7 @@ contains
           qnodes(j+1) = 0.5_pfqp*(1.0_pfqp-cos((j-1/2)*pi/(nnodes-2)))
        end do
        qnodes(nnodes) = 0.0_pfqp
-       
+
        do j = 1, nnodes
           flags(j) = ibset(flags(j), 0)
        end do
@@ -390,7 +390,7 @@ contains
 
   end subroutine sdc_qnodes
 
-  !>  Subroutine to compute the quadrature matrices 
+  !>  Subroutine to compute the quadrature matrices
   subroutine sdc_qmats(Qmat, Smat, dst, src, flags, ndst, nsrc)
     integer ,  intent(in), value  :: ndst   !!  Number of destination points
     integer ,   intent(in), value  :: nsrc   !!  Number of source points
@@ -398,7 +398,7 @@ contains
     real(pfqp), intent(in)  :: src(nsrc)     !!  Source points
     real(pfdp),      intent(out) :: Qmat(ndst-1, nsrc)  !!  O to dst quadrature weights
     real(pfdp),      intent(out) :: Smat(ndst-1, nsrc)  !! dst(m) to dst(m+1) quadrature weights
-    integer ,      intent(in)  :: flags(nsrc)     
+    integer ,      intent(in)  :: flags(nsrc)
 
     integer  :: i, j, m
     real(pfqp) :: q, s, den, p(0:nsrc)
@@ -445,9 +445,9 @@ contains
   !!
   !!   p = [ a_0, a_1, ..., a_n ].
   !!
-  
+
   !> Function to evaluate real polynomial
-  real(pfqp) function poly_eval(p, n, x) result(v) 
+  real(pfqp) function poly_eval(p, n, x) result(v)
     integer, intent(in), value :: n
     real(pfqp),       intent(in)        :: p(0:n), x
 
@@ -475,7 +475,7 @@ contains
 
 
   !> Subroutine to differentiate polynomial (in place)
-  subroutine poly_diff(p, n) 
+  subroutine poly_diff(p, n)
     integer, intent(in),   value :: n
     real(pfqp),       intent(inout) :: p(0:n)
 
@@ -492,7 +492,7 @@ contains
   end subroutine poly_diff
 
   !> Subroutine to integrate polynomial (in place)
-  subroutine poly_int(p, n) 
+  subroutine poly_int(p, n)
     integer, intent(in),   value :: n
     real(pfqp),       intent(inout) :: p(0:n)
 
@@ -510,7 +510,7 @@ contains
 
 
   !> Subroutine to compute Legendre polynomial coefficients using Bonnet's recursion formula.
-  subroutine poly_legendre(p, n) 
+  subroutine poly_legendre(p, n)
     integer, intent(in), value :: n
     real(pfqp),       intent(out)       :: p(0:n)
 
@@ -550,7 +550,7 @@ contains
 
   !> Subroutine to compute polynomial roots using the Durand-Kerner algorithm.
   !! The roots are assumed to be real.
-  subroutine poly_roots(roots, p0, n) 
+  subroutine poly_roots(roots, p0, n)
     integer,  intent(in), value   :: n
     real(pfqp),        intent(out)  :: roots(n)
     real(pfqp),        intent(in)   :: p0(0:n)
@@ -558,8 +558,8 @@ contains
     integer     :: i, j, k
     complex(pfqp) :: num, den, z0(n), z1(n)
     real(pfqp)    :: p(0:n)
-    
-    real(pfqp) ::  eps 
+
+    real(pfqp) ::  eps
 
     eps = epsilon(1.0_pfqp)*100.0_pfqp
     p = p0 / p0(n)

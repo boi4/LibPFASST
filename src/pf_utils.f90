@@ -8,7 +8,7 @@ module pf_mod_utils
   use pf_mod_timer
   use pf_mod_stop
   implicit none
-  
+
 contains
   !
   !> Compute full residual at each node and measure its size
@@ -30,21 +30,21 @@ contains
 
     ! compute max residual norm
     !   sol_norms(1) = lev%Q(1)%norm(flag) ! for adjoint
-     sol_norms = lev%Q(1)%norm(flag) ! for adjoint    
+     sol_norms = lev%Q(1)%norm(flag) ! for adjoint
 !    do m = 1, lev%nnodes-1
 !       res_norms(m) = lev%R(m)%norm(flag)
        res_norms = lev%R(lev%nnodes-1)%norm(flag)
        !       sol_norms(m+1) = lev%Q(m+1)%norm(flag) ! only the value at lev%nnodes is needed for forward integration, right?
-!       sol_norms(m+1) = sol_norms(1) ! only the value at lev%nnodes is needed for forward integration, right?        
+!       sol_norms(m+1) = sol_norms(1) ! only the value at lev%nnodes is needed for forward integration, right?
 !    end do
-    
+
     !    lev%residual = res_norms(lev%nnodes-1)
     m = lev%nnodes  ! for usual forward integration
     if(present(flag)) then
       if(flag==2) m = 1
 
     end if
-    lev%residual = maxval(res_norms)    
+    lev%residual = maxval(res_norms)
     if (sol_norms(m) > 0.0d0) then
        lev%residual_rel = lev%residual/sol_norms(m)
     else
@@ -52,7 +52,7 @@ contains
     end if
 
     call pf_set_resid(pf,lev%index,lev%residual)
-    
+
     call pf_stop_timer(pf, T_RESIDUAL,level_index)
 
 
@@ -73,12 +73,12 @@ contains
     integer :: m
     type(pf_level_t), pointer :: lev
     lev=>pf%levels(level_index)
-    
+
     !>  Compute the integral of F from t_n to t_m at each node
     call lev%ulevel%sweeper%integrate(pf,level_index, lev%Q, lev%F, dt, lev%I, flags)
 
     !> add tau if it exists
-    if (lev%index < pf%state%finest_level) then    
+    if (lev%index < pf%state%finest_level) then
        do m = 1, lev%nnodes-1
           call lev%I(m)%axpy(1.0_pfdp, lev%tauQ(m), flags)
        end do
@@ -86,11 +86,11 @@ contains
 
     !> subtract out the solution value
     if (present(flags)) then
-      do m = 1, lev%nnodes-1      
+      do m = 1, lev%nnodes-1
         if( (flags .eq. 0) .or. (flags .eq. 1) ) then
           call lev%R(m)%copy(lev%I(m), 1)
           !          call lev%R(m)%axpy(1.0_pfdp, lev%Q(1), 1)
-          call lev%R(m)%axpy(1.0_pfdp, lev%q0, 1)          
+          call lev%R(m)%axpy(1.0_pfdp, lev%q0, 1)
           call lev%R(m)%axpy(-1.0_pfdp, lev%Q(m+1), 1)
         end if
         if( (flags .eq. 0) .or. (flags .eq. 2) ) then
@@ -100,7 +100,7 @@ contains
         end if
       end do
     else
-      do m = 1, lev%nnodes-1      
+      do m = 1, lev%nnodes-1
         call lev%R(m)%copy(lev%I(m))
         call lev%R(m)%axpy(1.0_pfdp, lev%q0)
         call lev%R(m)%axpy(-1.0_pfdp, lev%Q(m+1))
@@ -123,7 +123,7 @@ contains
     resid=pf%levels(level_index)%residual
     print '("time: ", f10.4," step: ",i7.7," rank: ",i4.4," iter: ",i4.3," level: ",i2.2," resid: ",es14.7)', &
          time,step, rank, iter,level_index,resid
-    
+
     call flush(6)
   end subroutine pf_echo_residual
 
@@ -137,7 +137,7 @@ contains
     if (pf%results%save_residuals)  then
        pf%results%residuals(level_index, pf%state%pfblock,pf%state%iter+1, pf%state%sweep) = resid
     end if
-    
+
   end subroutine pf_set_resid
   !>  Subroutine to store a delta_q0 value
   subroutine pf_set_delta_q0(pf,level_index,delta)
@@ -149,19 +149,19 @@ contains
     if (pf%results%save_delta_q0)  then
        pf%results%delta_q0(level_index, pf%state%pfblock,pf%state%iter+1, pf%state%sweep) = delta
     end if
-    
+
   end subroutine pf_set_delta_q0
-  
+
   !>  Subroutine to store an error value
   subroutine pf_set_error(pf,level_index,error)
     type(pf_pfasst_t), intent(inout)           :: pf
     integer, intent(in) :: level_index
     real(pfdp), intent(in) :: error
-    if( min(level_index, pf%state%pfblock,pf%state%iter+1, pf%state%sweep) < 1) return    
+    if( min(level_index, pf%state%pfblock,pf%state%iter+1, pf%state%sweep) < 1) return
     if (pf%results%save_errors)  then
        pf%results%errors(level_index, pf%state%pfblock,pf%state%iter+1, pf%state%sweep) = error
     end if
-    
+
   end subroutine pf_set_error
 
   !>  Subroutine to set the final the iteration number for convergence
@@ -170,9 +170,9 @@ contains
     integer, intent(in) :: iter
     if(pf%state%pfblock < 1) return
     pf%results%iters(pf%state%pfblock) = iter
-    
+
   end subroutine pf_set_iter
-  
+
 
   !
   !> Generic evaluate all
@@ -189,10 +189,10 @@ contains
     lev => pf%levels(level_index)   !!  Assign level pointer
 !     which = 1
 !     if(present(flags)) which = flags
-    
+
 !     mystep = 1
 !     if(present(step)) mystep = step
-    
+
     do m = 1, lev%nnodes
        call lev%ulevel%sweeper%evaluate(pf,level_index, t(m), m, flags=flags, step=step)
     end do
@@ -209,7 +209,7 @@ contains
     call pf_set_delta_q0(pf,level_index,lev%max_delta_q0)
 
   end subroutine pf_delta_q0
-  
+
   !> Generic routine to spread initial conditions
   !! Each sweeper can define its own spreadq0 or use this generic one
   subroutine pf_generic_spreadq0(this,pf,level_index, t0)
@@ -221,7 +221,7 @@ contains
     integer :: m, p
     class(pf_level_t), pointer :: lev  !!  Level on which to spread
     lev => pf%levels(level_index)   !!  Assign level pointer
-    
+
     !  Stick initial condition into first node slot
     call lev%Q(1)%copy(lev%q0)
 
@@ -241,7 +241,7 @@ contains
 
   subroutine pf_apply_mat(dst, a, mat, src, zero_first, flags)
     !! Apply a matrix (tmat or rmat) to src and add to dst.
-    !! Mathematically this is 
+    !! Mathematically this is
     !!     dst= dst + a*mat*src
     !!  Where dst and src are vectors, mat is a matrix, and a is a scalar
     !!  If the optional variable "zero" is provided and is true, then we compute
@@ -250,32 +250,32 @@ contains
     real(pfdp),        intent(in)    :: a            !!  scalar
     real(pfdp),        intent(in)    :: mat(:, :)    !!  matrix
     class(pf_encap_t), intent(in)    :: src(:)       !!  src vector
-    logical,           intent(in), optional :: zero_first   !! If true, zero out the the dst variable before computing 
-    integer,           intent(in), optional :: flags  !! Used for choosing which variable to operate on 
-    
+    logical,           intent(in), optional :: zero_first   !! If true, zero out the the dst variable before computing
+    integer,           intent(in), optional :: flags  !! Used for choosing which variable to operate on
+
     !!  Local variables
     logical :: lzero   !!  local version of input parameter zero
     integer :: which   !!  local version of flags
-    integer :: n, m    !!  size of mat   
+    integer :: n, m    !!  size of mat
     integer :: i, j    !!  loop variables
 
     lzero = .true.; if (present(zero_first)) lzero = zero_first
     which = 1;      if(present(flags)) which = flags
-        
+
     n = SIZE(mat, dim=1)
     m = SIZE(mat, dim=2)
-    
+
     do i = 1, n
       if (lzero) call dst(i)%setval(0.0_pfdp, flags)
       do j = 1, m
          if (abs(a*mat(i, j)) /= 0.0_pfdp) then
             call dst(i)%axpy(a * mat(i, j), src(j), flags)
          end if
-         
+
       end do
     end do
   end subroutine pf_apply_mat
-  
+
 
   subroutine pf_apply_mat_backward(dst, a, mat, src, zero_first, flags)
     !! Apply a matrix (tmat or rmat) to src and add to dst.
@@ -283,25 +283,25 @@ contains
     real(pfdp),        intent(in)    :: a            !!  scalar
     real(pfdp),        intent(in)    :: mat(:, :)    !!  matrix
     class(pf_encap_t), intent(in)    :: src(:)       !!  src vector
-    logical,           intent(in), optional :: zero_first   !! If true, zero out the the dst variable before computing 
-    integer,           intent(in), optional :: flags  !! Used for choosing which variable to operate on 
+    logical,           intent(in), optional :: zero_first   !! If true, zero out the the dst variable before computing
+    integer,           intent(in), optional :: flags  !! Used for choosing which variable to operate on
 
-    
+
     !!  Local variables
     logical :: lzero   !!  local version of input parameter zero
     integer :: which   !!  local version of flags
-    integer :: n, m    !!  size of mat   
+    integer :: n, m    !!  size of mat
     integer :: i, j    !!  loop variables
 
-    lzero = .true.; if (present(zero_first)) lzero = zero_first    
+    lzero = .true.; if (present(zero_first)) lzero = zero_first
     which = 2;      if(present(flags)) which = flags
-    
+
     if( which /= 2 ) &
          call pf_stop(__FILE__,__LINE__,'pf_apply_mat_backward can only be used for restricting the backward integrals with which==2')
 
     n = SIZE(mat, dim=1)
     m = SIZE(mat, dim=2)
-        
+
     do i = 1, n
       if (lzero) call dst(n+1-i)%setval(0.0_pfdp, 2)
       do j = 1, m
@@ -309,7 +309,7 @@ contains
       end do
     end do
   end subroutine pf_apply_mat_backward
-  
+
   function convert_logical(q) result(q_string)
     logical,intent(in) :: q  ! true or false
     character(len=5)::  q_string
@@ -339,7 +339,7 @@ contains
     q_string=adjustr('"'//trim(tname)//'"')
 
   end function wrap_timer_name
-  
+
 
   function convert_real_array(q,n) result(q_string)
     integer,intent(in) :: n     ! length of array
@@ -352,6 +352,6 @@ contains
     q_string=adjustl('['//trim(f_string)//']')
 
   end function convert_real_array
-  
-  
+
+
 end module pf_mod_utils

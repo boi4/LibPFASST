@@ -8,7 +8,7 @@
 !
 !> Exponential integrator module
 !!
-!!  This module extends pf_sweeper_t and is used for creating an exponential sweeper 
+!!  This module extends pf_sweeper_t and is used for creating an exponential sweeper
 !!  that solves equations of the form
 !!         $$   y' = L y + f(t,y)  $$
 !!  When extending this class, you must supply the functions phib, swpPhib, and resPhib
@@ -35,7 +35,7 @@ module pf_mod_fexp_sweeper
 
     ! Specialized procedures for exponential integrator
     procedure(pf_f_eval_p),           deferred :: f_eval    ! computes nonlinear term in equation
-!    procedure(pf_comp_dt_p),          deferred :: comp_dt      !!  computes the time step    
+!    procedure(pf_comp_dt_p),          deferred :: comp_dt      !!  computes the time step
     procedure(pf_expSweepSubstep),    deferred :: expSweepSubstep
     procedure(pf_expResidualSubstep), deferred :: expResidualSubstep
 
@@ -178,7 +178,7 @@ module pf_mod_fexp_sweeper
       integer,    intent(in   ) :: level_index     !!  Level index
       real(pfdp),        intent(inout) :: dt       !!  time step chosen
     end subroutine pf_comp_dt_p
-    
+
   end interface
 
 contains
@@ -251,15 +251,15 @@ contains
        call pf_start_timer(pf, T_SWEEP,level_index)
        pf%state%sweep=k
 
-      ! NOTE: ensure that lev%F has been properly initialized here      
+      ! NOTE: ensure that lev%F has been properly initialized here
       do j = 1, nnodes
         call this%F_old(j)%copy(lev%F(j,1))  ! Save old f
       end do
       if (k .eq. 1) then ! Is this necessary? it seems that lev%F(j,1) = F(lev%(Q,q)) or F_old definition above line would be incorrect or is it zero initially?
          call lev%Q(1)%copy(lev%q0)
-         call pf_start_timer(pf, T_FEVAL,level_index)         
+         call pf_start_timer(pf, T_FEVAL,level_index)
          call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,1))      ! compute F_j^{[k+1]}
-         call pf_stop_timer(pf, T_FEVAL,level_index)         
+         call pf_stop_timer(pf, T_FEVAL,level_index)
       end if
       t = t0
       do j = 1, nnodes - 1
@@ -273,7 +273,7 @@ contains
             call lev%Q(j+1)%axpy(-1.0_pfdp, lev%tauQ(j-1))
           end if
        end if
-       call pf_start_timer(pf, T_FEVAL,level_index)       
+       call pf_start_timer(pf, T_FEVAL,level_index)
        call this%f_eval(lev%Q(j+1), t, level_index, lev%F(j+1,1))      			! compute F_j^{[k+1]}
        call pf_stop_timer(pf, T_FEVAL,level_index)
       end do  !  Substepping over nodes
@@ -285,7 +285,7 @@ contains
       call call_hooks(pf, level_index, PF_POST_SWEEP)
 
    end do  !  Sweeps
-   
+
   end subroutine exp_sweep
 
   ! =================================================================================

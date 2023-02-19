@@ -7,14 +7,14 @@ module pf_mod_amisdcQ
   use pf_mod_amisdc
   implicit none
 
-  !>  Asynchronous multi-implicit sweeper type 
+  !>  Asynchronous multi-implicit sweeper type
   type, extends(pf_amisdc_t), abstract :: pf_amisdcQ_t
      real(pfdp), allocatable :: QdiffE(:,:)
      real(pfdp), allocatable :: QdiffI(:,:)
      real(pfdp), allocatable :: QtilE(:,:)
      real(pfdp), allocatable :: QtilI(:,:)
      logical                 :: use_LUq_ = .true.
-   contains 
+   contains
      procedure :: sweep        => amisdcQ_sweep
      procedure :: initialize   => amisdcQ_initialize
      procedure :: integrate    => amisdcQ_integrate
@@ -44,10 +44,10 @@ contains
 
 
     call pf_start_timer(pf, T_SWEEP,lev%index)
-   
+
     call lev%ulevel%factory%create_array(S2,lev%nnodes-1,lev%index,lev%lev_shape)
     call lev%ulevel%factory%create_array(S3,lev%nnodes-1,lev%index,lev%lev_shape)
-    
+
     ! compute integrals and add fas correction
     do m = 1, lev%nnodes-1
 
@@ -86,29 +86,29 @@ contains
     dtsdc = dt * (lev%nodes(2:lev%nnodes) - lev%nodes(1:lev%nnodes-1))
     do m = 1, lev%nnodes-1
        t = t + dtsdc(m)
-             
+
        call rhsA%copy(lev%Q(1))
        ! First compute the explicit part of the right-hand side
        do n = 1, m
-          call rhsA%axpy(dt*this%QtilE(m,n), lev%F(n,1))  
+          call rhsA%axpy(dt*this%QtilE(m,n), lev%F(n,1))
        end do
        call rhsA%axpy(1.0_pfdp, lev%S(m))
-   
+
        ! Save the right-hand side with only the explicit contribution
        call rhsB%copy(rhsA)
 
        ! Add the first implicit part to the right-hand side and solve for the first asynchronous update
        do n = 1, m
-          call rhsA%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,2))  
+          call rhsA%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,2))
        end do
-       call rhsA%axpy(-1.0_pfdp, S2(m))  
+       call rhsA%axpy(-1.0_pfdp, S2(m))
        call this%f2comp(QA, t, 2.0_pfdp*dt*this%QtilI(m,m+1), rhsA, lev%index, lev%F(m+1,2))
 
        ! Add the second implicit part to the right-hand side and solve for the second asynchronous update
        do n = 1, m
-          call rhsB%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,3))  
+          call rhsB%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,3))
        end do
-       call rhsB%axpy(-1.0_pfdp, S3(m))  
+       call rhsB%axpy(-1.0_pfdp, S3(m))
        call this%f3comp(QB, t, 2.0_pfdp*dt*this%QtilI(m,m+1), rhsB, lev%index, lev%F(m+1,3))
 
        ! Now we average the two asynchronous updates
@@ -136,7 +136,7 @@ contains
 
   end subroutine sweep_coupled_implicit_terms
 
-  
+
   ! Perform an SDC sweep on level lev and set qend appropriately.
   ! In the asynchronous updates, the two implicit parts are decoupled
 
@@ -155,10 +155,10 @@ contains
     ! class(pf_encap_t), allocatable :: S2(:), S3(:)
 
     ! call start_timer(pf, TLEVEL+lev%index-1)
-   
+
     ! call lev%ulevel%factory%create_array(S2,lev%nnodes-1,lev%index,lev%lev_shape)
     ! call lev%ulevel%factory%create_array(S3,lev%nnodes-1,lev%index,lev%lev_shape)
-    
+
     ! ! compute integrals and add fas correction
     ! do m = 1, lev%nnodes-1
 
@@ -197,29 +197,29 @@ contains
     ! dtsdc = dt * (lev%nodes(2:lev%nnodes) - lev%nodes(1:lev%nnodes-1))
     ! do m = 1, lev%nnodes-1
     !    t = t + dtsdc(m)
-             
+
     !    call rhsA%copy(lev%Q(1))
     !    ! First compute the explicit part of the right-hand side
     !    do n = 1, m
-    !       call rhsA%axpy(dt*this%QtilE(m,n), lev%F(n,1))  
+    !       call rhsA%axpy(dt*this%QtilE(m,n), lev%F(n,1))
     !    end do
     !    call rhsA%axpy(1.0_pfdp, lev%S(m))
-   
+
     !    ! Save the right-hand side with only the explicit contribution
     !    call rhsB%copy(rhsA)
 
     !    ! Add the first implicit part to the right-hand side and solve for the first asynchronous update
     !    do n = 1, m
-    !       call rhsA%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,2))  
+    !       call rhsA%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,2))
     !    end do
-    !    call rhsA%axpy(1.0_pfdp, S2(m))  
+    !    call rhsA%axpy(1.0_pfdp, S2(m))
     !    call this%f2comp(QA, t, 2.0_pfdp*dt*this%QtilI(m,m+1), rhsA, lev%index, lev%F(m+1,2))
 
     !    ! Add the second implicit part to the right-hand side and solve for the second asynchronous update
     !    do n = 1, m
-    !       call rhsB%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,3))  
+    !       call rhsB%axpy(2.0_pfdp*dt*this%QtilI(m,n), lev%F(n,3))
     !    end do
-    !    call rhsB%axpy(1.0_pfdp, S3(m))  
+    !    call rhsB%axpy(1.0_pfdp, S3(m))
     !    call this%f3comp(QB, t, 2.0_pfdp*dt*this%QtilI(m,m+1), rhsB, lev%index, lev%F(m+1,3))
 
     !    ! Now we average the two asynchronous updates
@@ -242,7 +242,7 @@ contains
     ! call lev%ulevel%factory%destroy_single(QA,   lev%index,   lev%lev_shape)
     ! call lev%ulevel%factory%destroy_single(QB,   lev%index,   lev%lev_shape)
 
-        
+
   end subroutine sweep_decoupled_implicit_terms
 
 
@@ -257,7 +257,7 @@ contains
     call sweep_coupled_implicit_terms(this, pf, lev, t0, dt)
 
   end subroutine amisdcQ_sweep
-    
+
   ! Initialize matrices
   subroutine amisdcQ_initialize(this, lev)
     class(pf_amisdcQ_t), intent(inout) :: this
@@ -270,11 +270,11 @@ contains
 
     nnodes = lev%nnodes
     allocate(this%QdiffE(nnodes-1,nnodes),stat=ierr)  !  S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QdiffI(nnodes-1,nnodes),stat=ierr)  !  S-BE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QtilE(nnodes-1,nnodes),stat=ierr)  !  S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QtilI(nnodes-1,nnodes),stat=ierr)  !  S-BE
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
@@ -283,11 +283,11 @@ contains
 
     dsdc = lev%nodes(2:nnodes) - lev%nodes(1:nnodes-1)
     ! Implicit matrix
-    if (this%use_LUq_) then 
+    if (this%use_LUq_) then
        ! Get the LU
        call myLUq(lev%qmat,lev%LUmat,lev%nnodes,1)
        this%QtilI = lev%LUmat
-    else 
+    else
        do m = 1, nnodes-1
           do n = 1,m
              this%QtilI(m,n+1) =  dsdc(n)
@@ -309,7 +309,7 @@ contains
   subroutine amisdcQ_destroy(this, lev)
     class(pf_amisdcQ_t), intent(inout) :: this
     class(pf_level_t), intent(inout) :: lev
-    
+
     deallocate(this%QdiffE)
     deallocate(this%QdiffI)
     deallocate(this%QtilE)
@@ -326,7 +326,7 @@ contains
     class(pf_encap_t), intent(inout)    :: fintSDC(:)
 
     integer :: n, m, p
-    
+
     do n = 1, lev%nnodes-1
        call fintSDC(n)%setval(0.0_pfdp)
        do m = 1, lev%nnodes
@@ -334,7 +334,7 @@ contains
              call fintSDC(n)%axpy(dt*lev%qmat(n,m), fSDC(m,p))
           end do
        end do
-    end do  
+    end do
   end subroutine amisdcQ_integrate
- 
+
 end module pf_mod_amisdcQ

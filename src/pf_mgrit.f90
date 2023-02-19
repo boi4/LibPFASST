@@ -15,7 +15,7 @@ module pf_mod_MGRIT
   use pf_mod_comm
   use pf_mod_results
   use mpi
-  
+
   implicit none
 
   type :: int_vector
@@ -54,8 +54,8 @@ module pf_mod_MGRIT
      integer :: coarsest_level
      logical :: f_pts_flag = .true.
      logical :: c_pts_flag = .true.
-  end type 
-  
+  end type
+
 contains
 
   subroutine mgrit_initialize(pf, mg_ld, T0_glob, Tfin_glob, Nt_start, coarsen_factor, FAS_flag, FCF_flag, start_coarse_flag)
@@ -82,7 +82,7 @@ contains
         end if
         x = real(Nt_start * pf%comm%nproc, pfdp)
         y = log(x) / log(real(coarsen_factor, pfdp))
-        !print *,y,ceiling(y),floor(y) 
+        !print *,y,ceiling(y),floor(y)
         if (ceiling(y) .ne. floor(y)) then
            print *,'Error in MGRIT setup: number of finest-grid points must be a power of the coarsening factor'
            stop
@@ -122,7 +122,7 @@ contains
               pf%state%dt = mg_lev%dt
               pf%state%step = (pf%rank+1) * mg_lev%Nt - 1
            end if
-           
+
            mg_lev%rank_shifted = pf%rank
            mg_lev%send_to_rank = pf%rank+1
            mg_lev%recv_from_rank = pf%rank-1
@@ -158,7 +158,7 @@ contains
               if (start_dropping_procs .eqv. .false.) then
                  start_dropping_procs = .true.
               end if
-              if (mod(p, coarsen_factor**(i+1)) .eq. 0) then 
+              if (mod(p, coarsen_factor**(i+1)) .eq. 0) then
                  mg_lev%Nt = 1
                  mg_lev%rank_shifted = (mg_f_lev%rank_shifted+1)/ coarsen_factor - 1
                  mg_lev%send_to_rank = (mg_lev%rank_shifted+2) * coarsen_factor**(i+1) - 1
@@ -190,7 +190,7 @@ contains
         do level_index = coarsest_level,nlevels
            mg_lev => mg_ld(level_index)
            mg_lev%dt = (Tfin_glob - T0_glob)/mg_lev%Nt_glob
-           mg_lev%t0 = T0_glob + mg_lev%dt * pf%rank * mg_lev%Nt + mg_lev%dt 
+           mg_lev%t0 = T0_glob + mg_lev%dt * pf%rank * mg_lev%Nt + mg_lev%dt
            mg_lev%tfin = mg_lev%t0 + mg_lev%Nt * mg_lev%dt
            pf%state%t0 = mg_lev%t0
         end do
@@ -339,7 +339,7 @@ contains
     pf%state%sweep = 1
     pf%state%pstatus = PF_STATUS_ITERATING
 
-    !>  Allocate stuff for holding results 
+    !>  Allocate stuff for holding results
     call initialize_results(pf)
 
     if (pf%save_timings > 0) call pf_start_timer(pf, T_TOTAL)
@@ -360,7 +360,7 @@ contains
        call pf_lev%qend%setval(0.0_pfdp)
        call pf_lev%q0%setval(0.0_pfdp)
     end do
-    
+
     !>  Try to sync everyone
     call mpi_barrier(pf%comm%comm, ierror)
 
@@ -378,9 +378,9 @@ contains
           if (level_index .gt. coarsest_level) then
              call pf_lev%delta_q0%copy(mg_lev%qc(qc_len))
           else
-             call pf_lev%delta_q0%copy(pf_lev%qend) 
+             call pf_lev%delta_q0%copy(pf_lev%qend)
           end if
-       end do       
+       end do
 
        !  Do a v_cycle
        call pf_start_timer(pf, T_ITERATION)
@@ -479,7 +479,7 @@ contains
     call pf_start_timer(pf, T_SWEEP, level_index)
     call FCF_Relax(pf, mg_ld, level_index, iteration)
     call pf_stop_timer(pf, T_SWEEP, level_index)
-    
+
     if (pf%state%pstatus .eq. PF_STATUS_CONVERGED) then
         return
     end if
@@ -553,7 +553,7 @@ contains
      if (level_index .lt. nlevels) then
         zero_c_pts_flag = .true.
      else
-        zero_c_pts_flag = .false. 
+        zero_c_pts_flag = .false.
      end if
 
      if (level_index .lt. nlevels) then
@@ -561,7 +561,7 @@ contains
      else
         zero_rhs_flag = .true.
      end if
-     
+
      interp_flag = .false.
 
 
@@ -569,7 +569,7 @@ contains
      do i = 1,qc_len
         call mg_lev%qc_prev(i)%copy(mg_lev%qc(i))
      end do
-   
+
      if (zero_c_pts_flag .eqv. .false.) then
         !if ((pf%rank .lt. pf%comm%nproc-1) .and. (mg_lev%c_pts_flag .eqv. .true.)) then
            call pf_lev%qend%copy(mg_lev%qc(qc_len))
@@ -679,11 +679,11 @@ contains
           call pf_f_lev%ulevel%interpolate(pf_f_lev, pf_lev, mg_f_lev%q_temp, mg_lev%q_temp, mg_lev%t0)
           call mg_f_lev%qc(1)%axpy(1.0_pfdp, mg_f_lev%q_temp)
        end if
-       
+
        do i = 1,qc_len
           call mg_lev%qc(i)%copy(mg_lev%qc_prev(i))
        end do
-       
+
     end do
   end subroutine IdealInterp
 
@@ -721,14 +721,14 @@ contains
            else
               call pf_lev%q0%setval(0.0_pfdp)
            end if
-        else   
+        else
            if (zero_c_pts_flag .eqv. .true.) then
               call pf_lev%q0%setval(0.0_pfdp)
            else if (i .gt. 1) then
               call pf_lev%q0%copy(mg_lev%qc_prev(i-1))
            end if
         end if
-        
+
         do n = 1,size(mg_lev%f_blocks(i)%val)
            j = mg_lev%f_blocks(i)%val(n)
            !> Do a single step
@@ -815,7 +815,7 @@ contains
           if (pf%rank .lt. pf%comm%nproc-1) then
              if (send_flag .eqv. .true.) then
                 call mgrit_send(pf, mg_ld, level_index, 1, .true.)
-             end if 
+             end if
           end if
        else
           if (pf%rank .lt. pf%comm%nproc-1) then
@@ -956,7 +956,7 @@ contains
 
      end if
   end subroutine ExactSolve
- 
+
   subroutine InitExactSolve(pf, mg_ld, Q0, level_index)
      type(pf_pfasst_t), target, intent(inout) :: pf
      type(mgrit_level_data), allocatable, target, intent(inout) :: mg_ld(:)
@@ -1132,7 +1132,7 @@ contains
      call mpi_allreduce(mg_lev%res_norm_loc(1), res_norm_glob(1), 1, myMPI_Datatype, MPI_SUM, pf%comm%comm, ierr)
      res_norm_glob(1) = sqrt(res_norm_glob(1))
      pf_lev%residual = res_norm_glob(1)
-     
+
      if (res_norm_glob(1) .lt. pf%abs_res_tol) then
         pf%state%pstatus = PF_STATUS_CONVERGED
      end if

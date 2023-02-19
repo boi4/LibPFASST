@@ -8,7 +8,7 @@
 !
 !> Module for Exponential-SDC sweeper.
 !! ==================================
-!!  This module extends pf_sweeper_t and is used for creating an exponential sweeper 
+!!  This module extends pf_sweeper_t and is used for creating an exponential sweeper
 !!  that solves equations of the form
 !!         $$   y' = L y + N(t,y)  $$
 !!  When extending this class, you must supply the functions phib, swpPhib, and resPhib
@@ -104,7 +104,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
         !
         !           t_{n,j+1} - t_{n,j}         j = 1, ... q - 1
         !
-        !       and h is a user specified. This procedure is used when computing 
+        !       and h is a user specified. This procedure is used when computing
         !       exponential correction sweeps.
         !
         !       NOTE: The operator L is not passed in as a parameter, and must be
@@ -143,7 +143,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
         !
         !           t_{n,j} - t_{n}
         !
-        !       and h is a user specified. This procedure is used when computing 
+        !       and h is a user specified. This procedure is used when computing
         !       exponential correction sweeps.
         !
         !       NOTE: The operator L is not passed in as a parameter, and must be
@@ -210,18 +210,18 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
     !      nodes    DOUBLE(:)         sdc nodes
     !      eta      DOUBLE(:)         normalized substeps (t_{n,j+1} - t_{n,j})/h
     !      npieces  INTEGER           number of RHS peices (always will be one)
-    !      newF     pf_encap_t        stores new function evaluations 
+    !      newF     pf_encap_t        stores new function evaluations
     !      b        pf_encap_t(:)     stores vectors b for computing phi products
     ! =================================================================================
 
     subroutine exp_initialize(this, pf,level_index)
-      
+
         ! arguments
         class(pf_exp_t),   intent(inout) :: this
         type(pf_pfasst_t), target, intent(inout) :: pf
         integer,              intent(in)    :: level_index
 
-        
+
         ! local variables
         integer :: i, nnodes,ierr
         real(pfdp), allocatable :: q(:)
@@ -230,18 +230,18 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
         lev => pf%levels(level_index)
         nnodes = lev%nnodes
         allocate(this%eta(nnodes - 1),stat=ierr)
-        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
         allocate(this%nodes(nnodes),stat=ierr)
-        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)            
+        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
         allocate(q(nnodes),stat=ierr)
-        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
         ! set nodes and substeps
         this%nodes = lev%sdcmats%qnodes
         this%eta = this%nodes(2 : nnodes) - this%nodes(1 : nnodes - 1) ! substeps
         ! compute weights
         allocate(this%w(nnodes - 1, nnodes, nnodes),stat=ierr)
-        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
-        
+        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
+
         do i = 1, nnodes - 1
             q = this%nodes - this%nodes(i);
             call weights(this, REAL(0.0, pfdp), q, nnodes - 1, this%W(i,:,:))
@@ -279,10 +279,10 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
         nnodes = lev%nnodes
         ! error sweeps
         do k = 1, nsweeps
-           call call_hooks(pf, level_index, PF_PRE_SWEEP)   
-           call pf_start_timer(pf, T_SWEEP,level_index)        
-           
-           pf%state%sweep=k                  
+           call call_hooks(pf, level_index, PF_PRE_SWEEP)
+           call pf_start_timer(pf, T_SWEEP,level_index)
+
+           pf%state%sweep=k
            ! NOTE: ensure that lev%F has been properly initialized here
            do j = 1, nnodes
               call this%f_old(j)%copy(lev%F(j,1))  ! Save old f
@@ -293,11 +293,11 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
               call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,1))      ! compute F_j^{[k+1]}
               call pf_stop_timer(pf, T_FEVAL,level_index)
            end if
-           t = t0 
+           t = t0
            do j = 1, nnodes - 1
               t = t0 + dt * this%eta(j)
               ! form b vectors
-              call LocalDerivsAtNode(this, j, nnodes, this%f_old, this%b)  ! phi expansion for exponential picard integral              
+              call LocalDerivsAtNode(this, j, nnodes, this%f_old, this%b)  ! phi expansion for exponential picard integral
               call this%b(1)%copy(lev%Q(j))  ! add term \phi_0(tL) y_n
 
               call this%b(2)%axpy(REAL(-1.0, pfdp), this%f_old(j))         ! add -\phi_1(tL) F_j^{[k]}
@@ -319,7 +319,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
 
                  call lev%Q(j+1)%axpy(1.0_pfdp, lev%tauQ(j))
                  if (j > 1) then     ! The tau is not node to node, so subtract out
-                    call lev%Q(j+1)%axpy(-1.0_pfdp, lev%tauQ(j-1))                       
+                    call lev%Q(j+1)%axpy(-1.0_pfdp, lev%tauQ(j-1))
                  end if
               end if
 
@@ -327,13 +327,13 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
            call pf_start_timer(pf, T_FEVAL,level_index)
            call this%f_eval(lev%Q(nnodes), t0 + dt, level_index, lev%F(nnodes,1))   ! eval last nonlinear term
            call pf_stop_timer(pf, T_FEVAL,level_index)
-           
+
 
            if(pf%save_residuals) call pf_residual(pf, level_index, dt)
            call lev%qend%copy(lev%Q(lev%nnodes))
-           call pf_stop_timer(pf, T_SWEEP,level_index)                
+           call pf_stop_timer(pf, T_SWEEP,level_index)
            call call_hooks(pf, level_index, PF_POST_SWEEP)
-           
+
         end do  !  Sweeps
     end subroutine exp_sweep
 
@@ -365,48 +365,48 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
       real(pfdp),        intent(in   ) :: dt           !!  Time step
       class(pf_encap_t), intent(inout) :: fintsdc(:)   !!  Integral from t_n to t_m
       integer, optional, intent(in   ) :: flags
-      
+
       ! local variables
       integer :: i, nnodes
       type(pf_level_t), pointer :: lev
       lev => pf%levels(level_index)   !  Assign level pointer
 
       nnodes = lev%nnodes
-      
+
       do i = 1, nnodes
          call this%f_old(i)%copy(fSDC(i,1))  ! Save old f
       end do
-      
+
       do i = 1, nnodes - 1 ! loop over integrals : compute \int_{t_{n,i}}^{t_{n, i + 1}}
          call LocalDerivsAtNode(this, i, nnodes, this%f_old, this%b) ! compute derivatives
-         
+
          call this%b(1)%copy(qSDC(i))
-         
-         
+
+
          call fintsdc(i)%setval(0.0_pfdp)
          if (this%use_phib) then
             call this%phib(this%eta(i), dt, this%b, fintsdc(i))
          else
             call this%swpPhib(i, dt, this%b, fintsdc(i))
          end if
-         
+
          call fintsdc(i)%axpy(-1.0_pfdp,qSDC(i))
          if (i > 1) then
             call fintsdc(i)%axpy(1.0_pfdp,fintsdc(i-1))
          end if
       end do
-      
+
     end subroutine exp_integrate
 
     ! RESIDUAL: compute  residual (generic) ====================================
     subroutine exp_residual(this, pf, level_index, dt, flags)
-      
+
       class(pf_exp_t),  intent(inout)  :: this
       type(pf_pfasst_t), target, intent(inout) :: pf
       integer,              intent(in)    :: level_index
       real(pfdp),             intent(in)    :: dt
       integer, intent(in), optional    :: flags
-      
+
       integer :: m
       type(pf_level_t), pointer :: lev
       lev => pf%levels(level_index)   !  Assign level pointer
@@ -422,12 +422,12 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
       end if
 
       !> subtract out the solution value
-      do m = 1, lev%nnodes-1      
+      do m = 1, lev%nnodes-1
          call lev%R(m)%copy(lev%I(m))
          call lev%R(m)%axpy(-1.0_pfdp, lev%Q(m+1))
          call lev%R(m)%axpy(1.0_pfdp, lev%Q(1))
       end do
-      
+
 
     end subroutine exp_residual
 
@@ -441,9 +441,9 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
 
       type(pf_level_t), pointer :: lev
       lev => pf%levels(level_index)   !  Assign level pointer
-      
+
       call pf_generic_spreadq0(this, pf,level_index, t0)
-      
+
     end subroutine exp_spreadq0
 
     ! EVALUATE: evaluate the nonlinear term at node m ========================
@@ -458,7 +458,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
 
       type(pf_level_t), pointer :: lev
       lev => pf%levels(level_index)   !  Assign level pointer
-      call pf_start_timer(pf, T_FEVAL,level_index)      
+      call pf_start_timer(pf, T_FEVAL,level_index)
       call this%f_eval(lev%Q(m), t, level_index, lev%F(m,1))
       call pf_stop_timer(pf, T_FEVAL,level_index)
     end subroutine exp_evaluate
@@ -498,9 +498,9 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
     end subroutine exp_destroy
 
     ! =======================================================================
-    ! LocalDerivsAtNode: approximate the local derivative vector 
-    !           at the substep t_{n,i} for the nonlinear function N(y(t)) 
-    !           using the terms N(y{n,i}). Local coordinates coorespond to 
+    ! LocalDerivsAtNode: approximate the local derivative vector
+    !           at the substep t_{n,i} for the nonlinear function N(y(t))
+    !           using the terms N(y{n,i}). Local coordinates coorespond to
     !           s = h t.
     ! Arguments
     !
@@ -514,7 +514,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
     !           Nonlinear function evaluations; N_eval(i) contains N(y_{n,i})
     !
     !   N_deriv (output) pf_encap_t(:)
-    !           N_deriv(i) approximates \frac{d^{i-1}}{dt^{i-1}} N(y(t)) 
+    !           N_deriv(i) approximates \frac{d^{i-1}}{dt^{i-1}} N(y(t))
     ! =======================================================================
 
     subroutine LocalDerivsAtNode(this, i, nnodes, N_eval, N_deriv)
@@ -535,7 +535,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
             end do
         end do
       end subroutine LocalDerivsAtNode
-      
+
 
     ! =======================================================================
     ! WEIGHTS   Compute coefficients for finite difference approximation for
@@ -574,12 +574,12 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
 
         !        do ii = 1, m
 !        x = this%nodes - this%nodes(ii);
-           
+
            c1 = 1.0_pfdp
            c4 = x(1) - z
            W  = 0.0_pfdp
            W(1,1) = 1.0_pfdp
-           
+
            n = SIZE(x)
            do i=2,n
               mn = min(i,m+1)
@@ -593,7 +593,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
                     do k=mn,2,-1
                        W(i,k) = c1*(REAL(k-1,pfdp)*W(i-1,k-1) - c5*W(i-1,k))/c2;
                     enddo
-                    
+
                     W(i,1) = -c1*c5*W(i-1,1)/c2;
                  endif
                  do k=mn,2,-1
@@ -604,7 +604,7 @@ type, extends(pf_sweeper_t), abstract :: pf_exp_t
               c1 = c2;
            enddo
 !        end do
-        
+
 end subroutine weights
         subroutine exp_compute_dt(this,pf,level_index,  t0, dt,flags)
           class(pf_exp_t),  intent(inout) :: this
@@ -613,7 +613,7 @@ end subroutine weights
           real(pfdp),        intent(in   ) :: t0
           real(pfdp),        intent(inout) :: dt
           integer, optional,   intent(in)    :: flags
-          
+
           type(pf_level_t),    pointer :: lev
           lev => pf%levels(level_index)   !!  Assign level pointer
           !  Do nothing now

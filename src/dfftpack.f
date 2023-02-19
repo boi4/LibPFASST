@@ -218,7 +218,7 @@ C     gams	J1a
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION       CC(IDO,3,L1)           ,CH(IDO,L1,3)           ,
      1                WA1(1)     ,WA2(1)
-C     *** TAUI IS SQRT(3)/2 *** 
+C     *** TAUI IS SQRT(3)/2 ***
       DATA TAUR,TAUI /-0.5D0,0.86602540378443864676D0/
       IF (IDO .NE. 2) GO TO 102
       DO 101 K=1,L1
@@ -259,7 +259,7 @@ C     *** TAUI IS SQRT(3)/2 ***
       RETURN
       END
       SUBROUTINE PASSB4 (IDO,L1,CC,CH,WA1,WA2,WA3)
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z) 
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION       CC(IDO,4,L1)           ,CH(IDO,L1,4)           ,
      1                WA1(1)     ,WA2(1)     ,WA3(1)
       IF (IDO .NE. 2) GO TO 102
@@ -315,7 +315,7 @@ C     *** TAUI IS SQRT(3)/2 ***
       DIMENSION       CC(IDO,5,L1)           ,CH(IDO,L1,5)           ,
      1                WA1(1)     ,WA2(1)     ,WA3(1)     ,WA4(1)
 C     *** TR11=COS(2*PI/5), TI11=SIN(2*PI/5)
-C     *** TR12=COS(4*PI/5), TI12=SIN(4*PI/5)      
+C     *** TR12=COS(4*PI/5), TI12=SIN(4*PI/5)
       DATA TR11,TI11,TR12,TI12 /0.3090169943749474241D0,
      +     0.95105651629515357212D0,
      +     -0.8090169943749474241D0,0.58778525229247312917D0/
@@ -507,7 +507,7 @@ C
       RETURN
       END
       SUBROUTINE PASSF2 (IDO,L1,CC,CH,WA1)
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z) 
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION       CC(IDO,2,L1)           ,CH(IDO,L1,2)           ,
      1                WA1(1)
       IF (IDO .GT. 2) GO TO 102
@@ -531,7 +531,7 @@ C
       RETURN
       END
       SUBROUTINE PASSF3 (IDO,L1,CC,CH,WA1,WA2)
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z) 
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION       CC(IDO,3,L1)           ,CH(IDO,L1,3)           ,
      1                WA1(1)     ,WA2(1)
 C     *** TAUI IS -SQRT(3)/2 ***
@@ -631,7 +631,7 @@ C     *** TAUI IS -SQRT(3)/2 ***
       DIMENSION       CC(IDO,5,L1)           ,CH(IDO,L1,5)           ,
      1                WA1(1)     ,WA2(1)     ,WA3(1)     ,WA4(1)
 C     *** TR11=COS(2*PI/5), TI11=-SIN(2*PI/5)
-C     *** TR12=-COS(4*PI/5), TI12=-SIN(4*PI/5)  
+C     *** TR12=-COS(4*PI/5), TI12=-SIN(4*PI/5)
       DATA TR11,TI11,TR12,TI12 /0.3090169943749474241D0,
      +     -0.95105651629515357212D0,
      1     -0.8090169943749474241D0, -0.58778525229247312917D0/
@@ -854,7 +854,7 @@ C
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION       CC(IDO,3,L1)           ,CH(IDO,L1,3)           ,
      1                WA1(1)     ,WA2(1)
-C     *** TAUI IS SQRT(3)/2 *** 
+C     *** TAUI IS SQRT(3)/2 ***
       DATA TAUR,TAUI /-0.5D0,0.86602540378443864676D0/
       DO 101 K=1,L1
          TR2 = CC(IDO,2,K)+CC(IDO,2,K)
@@ -952,7 +952,7 @@ C     *** TAUI IS SQRT(3)/2 ***
       DIMENSION       CC(IDO,5,L1)           ,CH(IDO,L1,5)           ,
      1                WA1(1)     ,WA2(1)     ,WA3(1)     ,WA4(1)
 C     *** TR11=COS(2*PI/5), TI11=SIN(2*PI/5)
-C     *** TR12=COS(4*PI/5), TI12=SIN(4*PI/5)      
+C     *** TR12=COS(4*PI/5), TI12=SIN(4*PI/5)
       DATA TR11,TI11,TR12,TI12 /0.3090169943749474241D0,
      +     0.95105651629515357212D0,
      +     -0.8090169943749474241D0,0.58778525229247312917D0/

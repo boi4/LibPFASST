@@ -118,7 +118,7 @@ contains
           do m = 1, Nnodes-1
             call lev%I(m)%setval(0.0_pfdp,1)
             call this%I3(m)%setval(0.0_pfdp,1)
-            
+
             do n = 1, Nnodes
                call lev%I(m)%axpy(dt*this%QdiffE(m,n), lev%F(n,1), 1)
                call lev%I(m)%axpy(dt*this%QdiffI(m,n), lev%F(n,2), 1)
@@ -236,7 +236,7 @@ contains
        else if (sweep_p ) then
          call pf_residual(pf, level_index, dt, 2)
       else
-         call pf_stop(__FILE__,__LINE__,'invalid sweep')         
+         call pf_stop(__FILE__,__LINE__,'invalid sweep')
        end if
        ! done
        call pf_stop_timer(pf, T_SWEEP,level_index)
@@ -259,15 +259,15 @@ contains
 
     nnodes = lev%nnodes
     allocate(this%QdiffE(nnodes-1,nnodes),stat=ierr)  !  S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QdiffI(nnodes-1,nnodes),stat=ierr)  !  S-BE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QtilE(nnodes-1,nnodes),stat=ierr)  !  S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QtilI(nnodes-1,nnodes),stat=ierr)  !  S-BE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%dtsdc(nnodes-1),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     this%QtilE = 0.0_pfdp
     this%QtilI = 0.0_pfdp
 
@@ -364,7 +364,7 @@ contains
     type(pf_level_t), pointer :: lev
     lev => pf%levels(level_index)   !  Assign level pointer
 
-    
+
     which = 0
     if (present(flags)) which = flags
 
@@ -408,14 +408,14 @@ contains
     integer :: m, n, which
     type(pf_level_t), pointer :: lev
     lev => pf%levels(level_index)   !  Assign level pointer
-    
+
     which = 0
     if(present(flags)) which = flags
 
     call this%integrate(pf,level_index, pf%levels(level_index)%Q, pf%levels(level_index)%F, dt, &
          pf%levels(level_index)%I, which)
 
-    
+
     ! add tau (which is 'node to node')
     if (level_index < pf%state%finest_level) then
        do m = 1, pf%levels(level_index)%nnodes-1
@@ -453,13 +453,13 @@ contains
 
     which = 3
     if(present(flags)) which = flags
-    if (.not.present(flags)) call pf_stop(__FILE__,__LINE__,'MISDCQ_OC  WITHOUT FLAGS')          
+    if (.not.present(flags)) call pf_stop(__FILE__,__LINE__,'MISDCQ_OC  WITHOUT FLAGS')
 
     mystep = 1
     if(present(step))  then
        mystep = step !needed for sequential version
     else
-       call pf_stop(__FILE__,__LINE__,'MISDCQ_OC  WITHOUT step')                
+       call pf_stop(__FILE__,__LINE__,'MISDCQ_OC  WITHOUT step')
     end if
 
     select case(which)

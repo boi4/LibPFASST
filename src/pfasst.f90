@@ -14,6 +14,6 @@ module pfasst
 #ifndef NOMPI
   use pf_mod_comm_mpi
 #endif
-  
+
 end module pfasst
 

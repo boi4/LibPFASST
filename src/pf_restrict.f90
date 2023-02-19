@@ -24,32 +24,32 @@ contains
     real(pfdp),        intent(in)    :: t0            !!  time at beginning of step
     real(pfdp),        intent(in)    :: dt            !!  time step
     integer,           intent(in)    :: level_index   !! defines which level to restrict
-    integer, optional, intent(in)    :: flags, mystep    
+    integer, optional, intent(in)    :: flags, mystep
 
     !>  Local variables
-    class(pf_level_t), pointer :: c_lev    
+    class(pf_level_t), pointer :: c_lev
     class(pf_level_t), pointer :: f_lev
 
     integer    :: m, step,ierr
 
-    real(pfdp), allocatable :: c_times(:)  !!  Simulation time at coarse nodes  
+    real(pfdp), allocatable :: c_times(:)  !!  Simulation time at coarse nodes
     real(pfdp), allocatable :: f_times(:)  !!  Simulation time at fine nodes
-    
-    
+
+
     f_lev => pf%levels(level_index);
     c_lev => pf%levels(level_index-1)
-    
+
     step = pf%state%step+1
     if(present(mystep)) step = mystep
-    
+
     call call_hooks(pf, level_index, PF_PRE_RESTRICT_ALL)
     call pf_start_timer(pf, T_RESTRICT, level_index)
-    
+
 
     allocate(c_times(c_lev%nnodes),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(f_times(f_lev%nnodes),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
     !> restrict q's and recompute f's
     c_times = t0 + dt*c_lev%nodes
@@ -96,7 +96,7 @@ contains
 !!$!             call c_lev%tauQ(m)%axpy(-1.0_pfdp, c_lev%tauQ(m-1), flags)
 !!$          end do
 !!$       end if
-       
+
     end if
 
     call pf_stop_timer(pf, T_RESTRICT,level_index)
@@ -112,13 +112,13 @@ contains
 
     !! Restrict (in time and space) f_sol_array  to c_sol_array
     !! This version is for point values (either functions or solutions)
-    
+
     class(pf_level_t),  intent(inout) :: f_lev   !!   pointer to fine level
     class(pf_level_t),  intent(inout) :: c_lev   !!   pointer to coarse level
     class(pf_encap_t),  intent(inout) :: f_encap_array(:)   !! array of fine level data to be restricted
     class(pf_encap_t),  intent(inout) :: c_encap_array(:)   !! array of coarse level data to be computed
     real(pfdp),         intent(in) :: f_time(:)             !! time at the fine nodes
-    integer, optional, intent(in)    :: flags    
+    integer, optional, intent(in)    :: flags
 
     integer :: m,j
     integer :: f_nnodes,c_nnodes
@@ -128,11 +128,11 @@ contains
     c_nnodes = c_lev%nnodes
 
     !!  Create a temp array for the spatial restriction
-    if (f_lev%restrict_workspace_allocated   .eqv. .false.) then      
+    if (f_lev%restrict_workspace_allocated   .eqv. .false.) then
        call c_lev%ulevel%factory%create_array(f_lev%f_encap_array_c, f_nnodes, c_lev%index, c_lev%lev_shape)
        f_lev%restrict_workspace_allocated  = .true.
     end if
- 
+
     !  spatial restriction
     do m = 1, f_nnodes
        call f_lev%ulevel%restrict(f_lev, c_lev, f_encap_array(m), f_lev%f_encap_array_c(m), f_time(m), flags)
@@ -154,13 +154,13 @@ contains
 
     !! Restrict (in time and space) f_sol_array  to c_sol_array
     !! This version is for integrals
-    
+
     class(pf_level_t),  intent(inout) :: f_lev   !!   pointer to fine level
     class(pf_level_t),  intent(inout) :: c_lev   !!   pointer to coarse level
     class(pf_encap_t),  intent(inout) :: f_encap_array(:)   !! array of fine level data to be restricted
     class(pf_encap_t),  intent(inout) :: c_encap_array(:)   !! array of coarse level data to be computed
     real(pfdp),         intent(in) :: f_time(:)             !! time at the fine nodes
-    integer, optional, intent(in)    :: flags    
+    integer, optional, intent(in)    :: flags
 
     class(pf_encap_t), allocatable :: f_encap_array_c(:)  !!  fine solution restricted in space only
     integer :: m,j
@@ -171,7 +171,7 @@ contains
     c_nnodes = c_lev%nnodes
 
     !!  Create a temp array for the spatial restriction
-    if (f_lev%restrict_workspace_allocated   .eqv. .false.) then      
+    if (f_lev%restrict_workspace_allocated   .eqv. .false.) then
        call c_lev%ulevel%factory%create_array(f_lev%f_encap_array_c, f_nnodes, c_lev%index, c_lev%lev_shape)
        f_lev%restrict_workspace_allocated  = .true.
     end if
@@ -180,7 +180,7 @@ contains
     do m = 1, f_nnodes-1
        call f_lev%ulevel%restrict(f_lev, c_lev, f_encap_array(m), f_lev%f_encap_array_c(m), f_time(m), flags)
     end do
-    
+
     ! temporal restriction
     ! when restricting '0 to node' integral terms, skip the first entry since it is zero
     if (present(flags)) then

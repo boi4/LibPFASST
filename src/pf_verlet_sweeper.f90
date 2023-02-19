@@ -27,12 +27,12 @@ module pf_mod_verlet
      !  Matrices
      real(pfdp), ALLOCATABLE :: Qmat(:,:)     !  Spectral matrix for v
      real(pfdp), ALLOCATABLE :: QQmat(:,:)    !  Spectral matrix for x
-     real(pfdp), ALLOCATABLE :: Qver(:,:)     !  Verlet matrix for v (Trapezoid) 
+     real(pfdp), ALLOCATABLE :: Qver(:,:)     !  Verlet matrix for v (Trapezoid)
      real(pfdp), ALLOCATABLE :: QQver(:,:)    !  Verlet matrix for x
      real(pfdp), ALLOCATABLE :: Qtil(:,:)     !  Approximate matrix for v
      real(pfdp), ALLOCATABLE :: QQtil(:,:)    !  Approximate matrix for x
-     real(pfdp), ALLOCATABLE :: DQver(:,:)    !  Qmat-Qver 
-     real(pfdp), ALLOCATABLE :: DQQver(:,:)   !  QQmat-QQver 
+     real(pfdp), ALLOCATABLE :: DQver(:,:)    !  Qmat-Qver
+     real(pfdp), ALLOCATABLE :: DQQver(:,:)   !  QQmat-QQver
      real(pfdp), ALLOCATABLE :: DQtil(:,:)    !  Qmat-Qtil
      real(pfdp), ALLOCATABLE :: DQQtil(:,:)   !  QQmat-QQtil
      real(pfdp), ALLOCATABLE :: bvec(:)       !  Quadrature rule for v
@@ -41,7 +41,7 @@ module pf_mod_verlet
      real(pfdp), allocatable :: tsdc(:)       !  SDC times
      logical :: iqend  !  Decide whether to set qend by another Picard
 
-     class(pf_encap_t), allocatable :: rhs   !! holds rhs for implicit solve     
+     class(pf_encap_t), allocatable :: rhs   !! holds rhs for implicit solve
    contains
      procedure(pf_f_eval_p), deferred :: f_eval        !!  RHS function evaluations
      procedure(pf_f_comp_p), deferred :: f_comp        !!  Implicit solver
@@ -63,9 +63,9 @@ module pf_mod_verlet
 
   interface
      !>  This is the interface for the routine to compute the RHS function values
-     !>  Evaluate f_piece(y), where piece is one or two 
+     !>  Evaluate f_piece(y), where piece is one or two
      subroutine pf_f_eval_p(this,y, t, level_index, f)
-       !>  Evaluate f_piece(y), where piece is one or two 
+       !>  Evaluate f_piece(y), where piece is one or two
        import pf_verlet_t, pf_encap_t, pfdp
        class(pf_verlet_t),  intent(inout) :: this
        class(pf_encap_t), intent(in   ) :: y        !!  Argument for evaluation
@@ -80,7 +80,7 @@ module pf_mod_verlet
        class(pf_verlet_t),  intent(inout) :: this
 
 
-       class(pf_encap_t), intent(inout) :: y      !!  Solution of implicit solve 
+       class(pf_encap_t), intent(inout) :: y      !!  Solution of implicit solve
        real(pfdp),        intent(in   ) :: t      !!  Time of solve
        real(pfdp),        intent(in   ) :: dtq    !!  dt*quadrature weight
        class(pf_encap_t), intent(in   ) :: rhs    !!  RHS for solve
@@ -94,7 +94,7 @@ module pf_mod_verlet
        class(pf_verlet_t),  intent(inout) :: this
        class(pf_encap_t), intent(inout) :: y      !!  Variable
        real(pfdp),        intent(in   ) :: t      !!  Time of solve
-       integer,    intent(in   ) :: level_index   !!  Level index       
+       integer,    intent(in   ) :: level_index   !!  Level index
        real(pfdp) :: H
      end function pf_hamiltonian_p
      subroutine pf_comp_dt_p(this,y, t, level_index, dt)
@@ -111,7 +111,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Perform one SDC sweep on level level_index and set qend appropriately
-  subroutine verlet_sweep(this, pf, level_index, t0, dt,nsweeps, flags)  
+  subroutine verlet_sweep(this, pf, level_index, t0, dt,nsweeps, flags)
     use pf_mod_timer
     use pf_mod_hooks
 
@@ -122,7 +122,7 @@ contains
     real(pfdp),        intent(in   ) :: t0           !!  Time at beginning of time step
     real(pfdp),        intent(in   ) :: dt           !!  time step size
     integer,           intent(in)    :: nsweeps      !!  number of sweeps to do
-    integer, optional, intent(in   ) :: flags    
+    integer, optional, intent(in   ) :: flags
 
     !>  Local variables
     class(pf_level_t), pointer :: lev    !!  points to current level
@@ -151,9 +151,9 @@ contains
     !
     dtsq = dt*dt
     do k = 1,nsweeps
-       call call_hooks(pf, level_index, PF_PRE_SWEEP)       
+       call call_hooks(pf, level_index, PF_PRE_SWEEP)
        call pf_start_timer(pf, T_SWEEP,level_index)
-       
+
        pf%state%sweep=k
        do m = 1, lev%nnodes-1
           call lev%I(m)%setval(0.0_pfdp)
@@ -169,7 +169,7 @@ contains
              end do
           end if
           if (level_index < pf%state%finest_level) then
-             call lev%I(m)%axpy(1.0_pfdp, lev%tauQ(m))  
+             call lev%I(m)%axpy(1.0_pfdp, lev%tauQ(m))
           end if
        end do
        !  Recompute the first function value if this is first sweep
@@ -189,14 +189,14 @@ contains
           !  Lower triangular verlet to  new piece
           if (pf%state%iter .eq. 1)  then
              do n = 1, m
-                call this%rhs%axpy(dtsq*this%QQver(m,n), lev%F(n,1), 2)  
+                call this%rhs%axpy(dtsq*this%QQver(m,n), lev%F(n,1), 2)
              end do
           else
              do n = 1, m
-                call this%rhs%axpy(dtsq*this%QQtil(m,n), lev%F(n,1), 2)  
+                call this%rhs%axpy(dtsq*this%QQtil(m,n), lev%F(n,1), 2)
              end do
           endif
-          
+
           !>  Add the integral term
           call this%rhs%axpy(1.0_pfdp, lev%I(m),2)
 
@@ -206,25 +206,25 @@ contains
           !>  Add the dt*v_0
           call this%rhs%axpy(t-t0, lev%Q(1),12)
 
-          !  Update position term 
+          !  Update position term
           call lev%Q(m+1)%copy(this%rhs,2)
-          
+
           !  update function values
           call pf_start_timer(pf, T_FEVAL,level_index)
-          call this%f_eval(Lev%Q(m+1), t, level_index, Lev%F(m+1,1))  
+          call this%f_eval(Lev%Q(m+1), t, level_index, Lev%F(m+1,1))
           call pf_stop_timer(pf, T_FEVAL,level_index)
-          
+
 
           !  Now do the v peice
-          call this%rhs%setval(0.0_pfdp,1)          
+          call this%rhs%setval(0.0_pfdp,1)
           !  Lower triangular verlet to  new piece
           if (pf%state%iter .eq. 1)  then
              do n = 1, m+1
-                call this%rhs%axpy(dt*this%Qver(m,n), Lev%F(n,1), 1)  
+                call this%rhs%axpy(dt*this%Qver(m,n), Lev%F(n,1), 1)
              end do
           else
              do n = 1, m+1
-                call this%rhs%axpy(dt*this%Qtil(m,n), Lev%F(n,1), 1)  
+                call this%rhs%axpy(dt*this%Qtil(m,n), Lev%F(n,1), 1)
              end do
           end if
           call this%rhs%axpy(1.0_pfdp,Lev%I(m),1);
@@ -246,18 +246,18 @@ contains
 !             call Lev%encap%axpy(Lev%qend, dtsq*this%QQmat(m,n), Lev%F(n,1),2)
 !          end do
 !          if (associated(Lev%tauQ)) then
-!             call Lev%encap%axpy(Lev%qend, 1.0_pfdp, Lev%tauQ(nnodes-1))  
+!             call Lev%encap%axpy(Lev%qend, 1.0_pfdp, Lev%tauQ(nnodes-1))
 !             !          print *,'XXXXXXXXXXX  need code in verlet.f90'
 !          end if
 !       else
 !          call Lev%encap%copy(Lev%qend, Lev%Q(nnodes))
 !       end if
-       
+
        call pf_residual(pf, level_index, dt)
        call lev%qend%copy(lev%Q(lev%nnodes))
        call pf_stop_timer(pf, T_SWEEP,level_index)
        call call_hooks(pf, level_index, PF_POST_SWEEP)
-    
+
     end do ! end loop on sweeps
 
 
@@ -279,14 +279,14 @@ contains
 
     this%npieces = 1
     nnodes = Lev%nnodes
-    
+
     allocate(this%Qmat(nnodes-1,nnodes),stat=ierr)  !  0  to node integral
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QQmat(nnodes-1,nnodes),stat=ierr)  !  0 to node double integral (like Qmat*Qmat)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
 
-    allocate(this%Qtil(nnodes-1,nnodes),stat=ierr)  !  0  to node integral  approximation of Qmat 
+    allocate(this%Qtil(nnodes-1,nnodes),stat=ierr)  !  0  to node integral  approximation of Qmat
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%QQtil(nnodes-1,nnodes),stat=ierr)  !  0 to node QQmat  aproximation
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
@@ -313,7 +313,7 @@ contains
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%tsdc(nnodes),stat=ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
-    
+
     !>  Array of substep sizes
     this%dtsdc = lev%sdcmats%qnodes(2:nnodes) - lev%sdcmats%qnodes(1:nnodes-1)
     this%tsdc = lev%sdcmats%qnodes - lev%sdcmats%qnodes(1)
@@ -328,7 +328,7 @@ contains
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(qtemp2(nnodes,nnodes),stat=ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
-    
+
     !  form the QQ matrix depending on what you want
     select case (this%whichQQ)
     case (0)  !  Collocation (make it the product)
@@ -348,11 +348,11 @@ contains
              qtemp2(i,j) =  this%bvec(j)*(1.0_pfdp-qtemp(j,i)/this%bvec(i))
           end do
        end do
-       
+
        qtemp2 = matmul(qtemp,qtemp2)
        this%QQmat =  0.0_pfdp
-       this%QQmat =  qtemp2(2:nnodes,:)       
-       this%bbarvec=this%QQmat(nnodes-1,:);           
+       this%QQmat =  qtemp2(2:nnodes,:)
+       this%bbarvec=this%QQmat(nnodes-1,:);
     case (2)  !  Make the pair like in Lobatto B/A pair
        print *,'Error Making QQ by collocation Lobatto pair'
 
@@ -375,7 +375,7 @@ contains
     this%QQver = qtemp(2:nnodes,:) + 0.5_pfdp*lev%sdcmats%qmatFE*lev%sdcmats%qmatFE
 
    !  Get LU matrices if desired
-!    if (this%use_LUq .eq. 1) then 
+!    if (this%use_LUq .eq. 1) then
 !       print *,'Doing LU with doLU=',this%doLU
 !       call myLUq(SDCmats%qmat,SDCmats%qmatLU,nnodes,0)
 !       call pf_myLUexp(this%QQmat,L,U,nnodes,this%doLU)
@@ -384,10 +384,10 @@ contains
 !   else
    !   end if
 !   this%Qver=0.0_pfdp !  Normal verlet all the time
-!   this%QQver=0.0_pfdp   !  Normal verlet all the time        
-   
+!   this%QQver=0.0_pfdp   !  Normal verlet all the time
+
    this%Qtil=this%Qver  !  Normal verlet all the time
-   this%QQtil=this%QQver  !  Normal verlet all the time        
+   this%QQtil=this%QQver  !  Normal verlet all the time
 
    !
     !  Make differences
@@ -400,9 +400,9 @@ contains
 
     !>  Make space for rhs
     call lev%ulevel%factory%create_single(this%rhs, level_index,   lev%lev_shape)
-    
+
   end subroutine verlet_initialize
-  
+
   !-----------------------------------------------------------------------------
   !> Integrate (t_n to node)
   subroutine verlet_integrate(this, pf,level_index, qSDC, fSDC, dt, fintSDC,flags)
@@ -413,7 +413,7 @@ contains
     class(pf_encap_t), intent(in   ) :: fSDC(:, :)   !!  RHS Function values
     real(pfdp),        intent(in   ) :: dt           !!  Time step
     class(pf_encap_t), intent(inout) :: fintSDC(:)   !!  Integral from t_n to t_m
-    integer, optional, intent(in   ) :: flags    
+    integer, optional, intent(in   ) :: flags
 
     integer :: n, m
     type(pf_level_t),    pointer :: lev
@@ -445,19 +445,19 @@ contains
 
     call this%integrate(pf,level_index, lev%Q, lev%F, dt, lev%I, flags)
 
-    ! add tau 
+    ! add tau
     if (level_index < pf%state%finest_level) then
        do m = 1, lev%nnodes-1
           call lev%I(m)%axpy(1.0_pfdp, lev%tauQ(m), flags)
        end do
     end if
-    do m = 1, lev%nnodes-1      
+    do m = 1, lev%nnodes-1
        call lev%R(m)%copy(lev%I(m))
        call lev%R(m)%axpy(1.0_pfdp, lev%Q(1))
        call lev%R(m)%axpy(-1.0_pfdp, lev%Q(m+1))
     end do
 
- 
+
   end subroutine verlet_residual
 
   !-----------------------------------------------------------------------------
@@ -474,9 +474,9 @@ contains
 !    call c_f_pointer(Lev%sweeper%sweeperctx, verlet)
 !
 !    nnodes = Lev%nnodes
-!  
+!
 !    dtsdc = dt * (Lev%nodes(2:Lev%nnodes) - Lev%nodes(1:Lev%nnodes-1))
-!    call Lev%encap%copy(Lev%qend, Lev%Q(1))        
+!    call Lev%encap%copy(Lev%qend, Lev%Q(1))
 !    call Lev%encap%axpy(Lev%qend, dt, Lev%Q(1), 12)  !  Add the dt*v_0 term
 !    do m = 1, Lev%nnodes
 !       call Lev%encap%axpy(Lev%qend, dt*Lev%qmat(nnodes,m), Lev%F(m,1),1)
@@ -494,7 +494,7 @@ contains
 
     type(pf_level_t),    pointer :: lev
     lev => pf%levels(level_index)   !!  Assign level pointer
-    
+
     deallocate(this%Qmat)
     deallocate(this%QQmat)
 
@@ -514,10 +514,10 @@ contains
     deallocate(this%bbarvec)
 
     deallocate(this%dtsdc)
-    deallocate(this%tsdc)    
+    deallocate(this%tsdc)
 
 
-    call lev%ulevel%factory%destroy_single(this%rhs)    
+    call lev%ulevel%factory%destroy_single(this%rhs)
   end subroutine verlet_destroy
 
   !> Spread the intial data for Verlet sweepers
@@ -530,7 +530,7 @@ contains
 
     type(pf_level_t),    pointer :: lev
     lev => pf%levels(level_index)   !!  Assign level pointer
-    
+
     call pf_generic_spreadq0(this,pf,level_index, t0)
   end subroutine verlet_spreadq0
 
@@ -545,17 +545,17 @@ contains
 
     type(pf_level_t),    pointer :: lev
     lev => pf%levels(level_index)   !!  Assign level pointer
-    
+
     call this%comp_dt(lev%q0,t0,level_index, dt)
   end subroutine verlet_compute_dt
-  
+
 
   !> Subroutine to evaluate function value at node m
   subroutine verlet_evaluate(this, pf,level_index, t, m, flags, step)
     class(pf_verlet_t),  intent(inout) :: this
     type(pf_pfasst_t), target, intent(inout) :: pf
     integer,              intent(in)    :: level_index
-    
+
     real(pfdp),        intent(in   ) :: t    !!  Time at which to evaluate
     integer,           intent(in   ) :: m    !!  Node at which to evaluate
     integer, intent(in), optional   :: flags, step
@@ -577,10 +577,10 @@ contains
 
     type(pf_level_t),    pointer :: lev
     lev => pf%levels(level_index)   !!  Assign level pointer
-    
+
     call pf_generic_evaluate_all(this,pf,level_index, t)
   end subroutine verlet_evaluate_all
-  
+
 
 end module pf_mod_verlet
 

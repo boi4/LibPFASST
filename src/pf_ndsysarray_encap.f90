@@ -3,7 +3,7 @@
 ! This file is part of LIBPFASST.
 !
 
-!> Module to define and encapsulation for a system of N-dimensional arrays 
+!> Module to define and encapsulation for a system of N-dimensional arrays
 !!
 !! When a new solution is created by a PFASST level, this encapsulation
 !! uses the levels 'arr_shape' attribute to create a new multi-component array with that
@@ -37,7 +37,7 @@ module pf_mod_ndsysarray
      procedure :: destroy_array => ndsysarray_destroy_array
   end type pf_ndsysarray_factory_t
 
-  !> Type for system of  N-dimensional arrays,  extends the abstract encap type  
+  !> Type for system of  N-dimensional arrays,  extends the abstract encap type
   type, extends(pf_encap_t) :: pf_ndsysarray_t
      integer             :: ndim    !  The spatial dimension of each component in system
      integer             :: ncomp  !  The number of components in the system
@@ -64,15 +64,15 @@ contains
     select type (q)
     class is (pf_ndsysarray_t)
        allocate(q%arr_shape(SIZE(arr_shape)),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                         
-       
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
+
        q%ndim   = SIZE(arr_shape)-1
        q%ncomp = arr_shape(q%ndim+1)
        q%ndof = product(arr_shape(1:q%ndim))
        q%arr_shape = arr_shape
 
        allocate(q%flatarray(product(arr_shape)),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                                
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     end select
   end subroutine ndsysarray_build
 
@@ -85,7 +85,7 @@ contains
 
     integer :: ierr
     allocate(pf_ndsysarray_t::x,stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                             
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     call ndsysarray_build(x, lev_shape)
   end subroutine ndsysarray_create_single
 
@@ -98,7 +98,7 @@ contains
     integer,                intent(in   )              :: lev_shape(:)
     integer :: i,ierr
     allocate(pf_ndsysarray_t::x(n),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                                 
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     do i = 1, n
        call ndsysarray_build(x(i), lev_shape)
     end do
@@ -151,7 +151,7 @@ contains
 
   !>  The following are the base subroutines that all encapsulations must provide
   !!
-  
+
   !> Subroutine to set array to a scalare  value.
   subroutine ndsysarray_setval(this, val, flags)
     class(pf_ndsysarray_t), intent(inout)           :: this
@@ -169,7 +169,7 @@ contains
     type is (pf_ndsysarray_t)
        this%flatarray = src%flatarray
     class default
-       call pf_stop(__FILE__,__LINE__,'invalid type')              
+       call pf_stop(__FILE__,__LINE__,'invalid type')
     end select
   end subroutine ndsysarray_copy
 
@@ -215,7 +215,7 @@ contains
           this%flatarray = a*x%flatarray + this%flatarray
        end if
     class default
-       call pf_stop(__FILE__,__LINE__,'invalid type')              
+       call pf_stop(__FILE__,__LINE__,'invalid type')
     end select
 
   end subroutine ndsysarray_axpy
@@ -233,7 +233,7 @@ contains
   function cast_as_ndsysarray(encap_polymorph) result(ndsysarray_obj)
     class(pf_encap_t), intent(in), target :: encap_polymorph
     type(pf_ndsysarray_t), pointer :: ndsysarray_obj
-    
+
     select type(encap_polymorph)
     type is (pf_ndsysarray_t)
        ndsysarray_obj => encap_polymorph
@@ -263,11 +263,11 @@ contains
        end if
     end select
   end function get_array1d
-  
+
 
   function get_array2d(x,n,flags) result(r)
     class(pf_encap_t), target,intent(in) :: x
-    integer, intent(in) :: n    
+    integer, intent(in) :: n
     integer,           intent(in   ), optional :: flags
     real(pfdp), pointer :: r(:,:)
 
@@ -286,12 +286,12 @@ contains
           else
              call pf_stop(__FILE__,__LINE__,'bad dimension, must be 2. ndim=',x%ndim)
           end if
-          
+
        endif
-       
+
     end select
   end function get_array2d
-  
+
 
   function get_array3d(x,n,flags) result(r)
     class(pf_encap_t), target,intent(in) :: x
@@ -340,5 +340,5 @@ contains
        end if
     end select
   end function get_array4d
-  
+
 end module pf_mod_ndsysarray

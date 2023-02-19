@@ -62,7 +62,7 @@ module pf_mod_imexR_sweeper
        integer,    intent(in   )         :: piece       !!  Which piece to evaluate
      end subroutine pf_f_eval_p
 
-     !>  The interface to the routine to do implicit solve 
+     !>  The interface to the routine to do implicit solve
      !>  i.e, solve the equation y - dtq*f_2(y) =rhs
      subroutine pf_f_comp_p(this,y, t, dtq, rhs, level_index, f, piece)
        import pf_imexR_sweeper_t, pf_encap_t, pfdp
@@ -100,7 +100,7 @@ contains
     real(pfdp)  :: t        !!  Time at nodes
 
     lev => pf%levels(level_index)   !  Assign level pointer
-    
+
     call pf_residual(pf, level_index, dt)
     do k = 1,nsweeps   !!  Loop over sweeps
 
@@ -119,7 +119,7 @@ contains
           if (this%implicit) &
                call this%F_oldI(m)%copy(lev%F(m,2))
        end do
-       
+
        !  Recompute the first function value if this is first sweep
        if (k .eq. 1) then
           call lev%Q(1)%copy(lev%q0)
@@ -128,13 +128,13 @@ contains
              call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,1),1)
              call pf_stop_timer(pf,T_FEVAL,level_index)
           end if
-          
+
           if (this%implicit) then
              call pf_start_timer(pf,T_FEVAL,level_index)
              call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,2),2)
              call pf_stop_timer(pf,T_FEVAL,level_index)
           end if
-          
+
        end if
 
        t = t0
@@ -162,7 +162,7 @@ contains
              call this%rhs%axpy(-dt*this%QtilI(m,m+1), this%F_oldI(m+1))
              call pf_start_timer(pf,T_FCOMP,level_index)
              call this%f_comp(lev%Q(m+1), t, dt*this%QtilI(m,m+1), this%rhs, level_index,lev%F(m+1,2),2)
-             call pf_stop_timer(pf,T_FCOMP,level_index)             
+             call pf_stop_timer(pf,T_FCOMP,level_index)
           else
              call lev%Q(m+1)%copy(this%rhs)
           end if
@@ -172,7 +172,7 @@ contains
              call this%f_eval(lev%Q(m+1), t, level_index, lev%F(m+1,1),1)
              call pf_stop_timer(pf,T_FEVAL,level_index)
           end if
-          
+
 
        end do  !!  End substep loop
        call pf_residual(pf, level_index, dt)
@@ -200,7 +200,7 @@ contains
     !  The default is to use both pieces, but can be overriddent in local sweeper
     this%explicit=.TRUE.
     this%implicit=.TRUE.
-    
+
     nnodes = lev%nnodes
     allocate(this%QdiffE(nnodes-1,nnodes),stat=ierr)
     if (ierr /=0) stop "allocate fail in imex_initialize for QdiffE"
@@ -242,7 +242,7 @@ contains
     call lev%ulevel%factory%create_single(this%rhs, level_index,   lev%lev_shape)
     call lev%ulevel%factory%create_array(this%F_oldE, nnodes,level_index,lev%lev_shape)
     call lev%ulevel%factory%create_array(this%F_oldI, nnodes,level_index,lev%lev_shape)
-    
+
   end subroutine imex_initialize
 
   !>  Subroutine to deallocate sweeper
@@ -281,7 +281,7 @@ contains
     integer :: n, m
     type(pf_level_t), pointer :: lev        !  Current level
     lev => pf%levels(level_index)   !  Assign level pointer
-    
+
     do n = 1, lev%nnodes-1
        call fintSDC(n)%setval(0.0_pfdp)
        do m = 1, lev%nnodes
@@ -291,10 +291,10 @@ contains
                call fintSDC(n)%axpy(dt*lev%sdcmats%qmat(n,m), fSDC(m,2))
        end do
     end do
-       
 
-!    if (this%explicit) call pf_apply_mat(fintSDC, dt, lev%sdcmats%Qmat, fSDC(:,1), .false.)    
-!    if (this%implicit) call pf_apply_mat(fintSDC, dt, lev%sdcmats%Qmat, fSDC(:,2), .false.)    
+
+!    if (this%explicit) call pf_apply_mat(fintSDC, dt, lev%sdcmats%Qmat, fSDC(:,1), .false.)
+!    if (this%implicit) call pf_apply_mat(fintSDC, dt, lev%sdcmats%Qmat, fSDC(:,2), .false.)
   end subroutine imex_integrate
 
 
@@ -305,7 +305,7 @@ contains
     integer,           intent(in)    :: level_index  !!  level on which to initialize
     real(pfdp),        intent(in   ) :: dt           !!  Time step
     integer, intent(in), optional   :: flags
-    
+
     call pf_generic_residual(this, pf, level_index, dt)
   end subroutine imex_residual
 
@@ -334,14 +334,14 @@ contains
     lev => pf%levels(level_index)   !  Assign level pointer
 
     if (this%explicit) then
-       call pf_start_timer(pf,T_FEVAL,level_index)       
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(m), t, level_index, lev%F(m,1),1)
-       call pf_stop_timer(pf,T_FEVAL,level_index)       
+       call pf_stop_timer(pf,T_FEVAL,level_index)
     end if
     if (this%implicit) then
-       call pf_start_timer(pf,T_FEVAL,level_index)       
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(m), t, level_index, lev%F(m,2),2)
-       call pf_stop_timer(pf,T_FEVAL,level_index)       
+       call pf_stop_timer(pf,T_FEVAL,level_index)
     end if
   end subroutine imex_evaluate
 
@@ -352,7 +352,7 @@ contains
     integer,           intent(in)    :: level_index  !!  level on which to initialize
     real(pfdp),        intent(in   ) :: t(:)  !!  Array of times at each node
     integer, intent(in), optional   :: flags, step
-    
+
     call pf_generic_evaluate_all(this, pf,level_index, t)
   end subroutine imex_evaluate_all
 

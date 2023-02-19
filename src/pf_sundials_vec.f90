@@ -7,7 +7,7 @@ module pf_mod_sundialsVec
   use fsundials_nvector_mod
 
   implicit none
-  !>  Type to create and destroy N-dimenstional arrays 
+  !>  Type to create and destroy N-dimenstional arrays
   type, extends(pf_factory_t) :: pf_sundialsVec_factory_t
    contains
      procedure :: create_single  => pf_sundialsVec_create_single
@@ -15,7 +15,7 @@ module pf_mod_sundialsVec
      procedure :: destroy_single => pf_sundialsVec_destroy_single
      procedure :: destroy_array => pf_sundialsVec_destroy_array
   end type pf_sundialsVec_factory_t
-  
+
 
   ! ----------------------------------------------------------------
   type, public :: FVec
@@ -51,7 +51,7 @@ contains
     function cast_as_pf_sundialsVec(encap_polymorph) result(pf_sundialsVec_obj)
     class(pf_encap_t), intent(in), target :: encap_polymorph
     type(pf_sundialsVec_t), pointer :: pf_sundialsVec_obj
-    
+
     select type(encap_polymorph)
     type is (pf_sundialsVec_t)
        pf_sundialsVec_obj => encap_polymorph
@@ -66,21 +66,21 @@ contains
     integer,           intent(in   ) :: shape_in(:)
 
     integer nn,psize,rank,ierr
-    integer(c_long)  :: neq 
+    integer(c_long)  :: neq
     neq=shape_in(1)
-    
+
     select type (q)
     class is (pf_sundialsVec_t)
        ! create SUNDIALS N_Vector
        q%sundialsVec => FN_VNew_Serial(neq)
        if (.not. associated(q%sundialsVec)) then
-          call pf_stop(__FILE__,__LINE__,'sundial creation  fail')  
+          call pf_stop(__FILE__,__LINE__,'sundial creation  fail')
        end if
-       
+
        !       call mpi_comm_rank(PETSC_COMM_WORLD, rank,ierr);CHKERRQ(ierr)
-       
+
        allocate(q%arr_shape(SIZE(shape_in)),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                                
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
        q%ndim   = SIZE(shape_in)
        q%arr_shape = shape_in
     end select
@@ -95,7 +95,7 @@ contains
     integer :: ierr
 
     allocate(pf_sundialsVec_t::x,stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                             
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     call pf_sundialsVec_build(x, lev_shape)
   end subroutine pf_sundialsVec_create_single
 
@@ -108,7 +108,7 @@ contains
     integer,                intent(in   )              :: lev_shape(:)
     integer :: i,ierr
     allocate(pf_sundialsVec_t::x(n),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                             
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     do i = 1, n
        call pf_sundialsVec_build(x(i), lev_shape)
     end do
@@ -210,7 +210,7 @@ contains
     integer :: psize
     p_sundialsVec=z
     call fn_vsetarraypointer(p_sundialsVec,this%sundialsVec)
-    
+
   end subroutine pf_sundialsVec_unpack
 
   !> Subroutine to define the norm of the array (here the max norm)
@@ -220,7 +220,7 @@ contains
     real(pfdp) :: norm
 
     norm=fn_vmaxnorm(this%sundialsVec)
-    
+
   end function pf_sundialsVec_norm
 
   !> Subroutine to compute y = a x + y where a is a scalar and x and y are arrays
@@ -232,7 +232,7 @@ contains
 
     select type(x)
     type is (pf_sundialsVec_t)
-       call fn_vlinearsum(a, x%sundialsVec,1.0_pfdp,this%sundialsVec,this%sundialsVec)          
+       call fn_vlinearsum(a, x%sundialsVec,1.0_pfdp,this%sundialsVec,this%sundialsVec)
     class default
        call pf_stop(__FILE__,__LINE__,'Type error')
     end select

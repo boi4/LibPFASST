@@ -152,7 +152,7 @@ contains
     integer                   :: k               !!  Loop indices
     integer                   :: level_index     !!  Local variable for looping over levels
     real(pfdp)                :: t0k             !!  Initial time at time step k
-    pf%state%iter = -1          
+    pf%state%iter = -1
 
     call call_hooks(pf, 1, PF_PRE_PREDICTOR)
     call pf_start_timer(pf, T_PREDICTOR)
@@ -160,7 +160,7 @@ contains
     if (pf%debug) print*, 'DEBUG --', pf%rank, 'beginning predictor'
     f_lev => pf%levels(pf%state%finest_level)
     !! Step 0.  Pick the time step for this block
-    call f_lev%ulevel%sweeper%compute_dt(pf,pf%state%finest_level, t0,dt)    
+    call f_lev%ulevel%sweeper%compute_dt(pf,pf%state%finest_level, t0,dt)
     !!
     !! Step 1. Getting the  initial condition on the finest level at each processor
     !!         If we are doing multiple levels, then we need to coarsen to fine level
@@ -168,7 +168,7 @@ contains
        call f_lev%ulevel%sweeper%spreadq0(pf,pf%state%finest_level, t0)
     endif
     !!  Step 1.5  Compute the time step for this block given the initial q0 and function values
-    
+
 !    if (pf%nlevels==1) return
     !!
     !!  Step 2:   Proceed fine to coarse levels coarsening the fine solution and computing tau correction
@@ -201,17 +201,17 @@ contains
           call pf_recv(pf, c_lev, 100000+pf%rank, .true.)
 
           !  Do a RK_step
-          call c_lev%ulevel%stepper%do_n_steps(pf, level_index,t0, c_lev%q0,c_lev%qend, dt, 1)       
+          call c_lev%ulevel%stepper%do_n_steps(pf, level_index,t0, c_lev%q0,c_lev%qend, dt, 1)
           !  Send forward
           call pf_send(pf, c_lev,  100000+pf%rank+1, .false.)
        else  !  Normal PFASST burn in
           level_index=1
           c_lev => pf%levels(level_index)
-          do k = 1, pf%rank 
+          do k = 1, pf%rank
              pf%state%iter = -k
              ! Remember t0=(pf%rank)*dt is the beginning of this time slice so
-             ! t0-(pf%rank)*dt is 0             
-             t0k = t0-real(pf%rank+k-1,pfdp)*dt 
+             ! t0-(pf%rank)*dt is 0
+             t0k = t0-real(pf%rank+k-1,pfdp)*dt
                                                 ! and we iterate up to the correct time step.
                                                 ! for optimal control problem t, t0k has no influence on f_eval, so there this does something else
 
@@ -224,7 +224,7 @@ contains
                 end if
              end if
              !  Do some sweeps
-             if (pf%debug) print *,'sweep at pred 3,lev=',level_index             
+             if (pf%debug) print *,'sweep at pred 3,lev=',level_index
              call c_lev%ulevel%sweeper%sweep(pf, level_index, t0k, dt,pf%nsweeps_burn)
           end do
        endif  !  RK_pred
@@ -244,7 +244,7 @@ contains
              call pf_recv(pf, c_lev, c_lev%index*110000+pf%rank+k, .true.)
 
              !  Do a sweep
-             if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 4,lev=',level_index             
+             if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 4,lev=',level_index
              call c_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, 1)
              !  Send forward
              call pf_send(pf, c_lev,  c_lev%index*110000+pf%rank+1+k, .false.)
@@ -253,7 +253,7 @@ contains
           if (c_lev%nsweeps_pred .gt. 0) then
              !  Get new initial conditions
              call pf_recv(pf, c_lev, c_lev%index*110000+pf%rank, .true.)
-             !  Do a sweeps             
+             !  Do a sweeps
              if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 4,lev=',level_index
              call c_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, c_lev%nsweeps_pred)
              !  Send forward
@@ -271,13 +271,13 @@ contains
        call interpolate_time_space(pf, t0, dt, level_index, c_lev%Finterp)
        call f_lev%qend%copy(f_lev%Q(f_lev%nnodes), flags=0)
        if (pf%rank /= 0) call interpolate_q0(pf, f_lev, c_lev,flags=0)
-       
+
        !  Do a sweep on level unless we are at the finest level
 !       if (level_index < pf%state%finest_level) then
-          if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 5,lev=',level_index                                 
+          if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 5,lev=',level_index
           call f_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, f_lev%nsweeps_pred)
 !       end if
-    end do 
+    end do
     pf%state%iter   = 0
 
     call pf_stop_timer(pf, T_PREDICTOR)
@@ -296,7 +296,7 @@ contains
     logical,           intent(out)   :: residual_converged  !! Return true if residual is below tolerances
 
     residual_converged = .false.
-    
+
     ! Check to see if relative tolerance is met
     if (pf%levels(level_index)%residual_rel < pf%rel_res_tol) then
        if (pf%debug)  print*, 'DEBUG --', pf%rank, ' residual relative tol met',pf%levels(level_index)%residual_rel
@@ -619,7 +619,7 @@ contains
           call f_lev%delta_q0%copy(f_lev%q0)
           call pf_recv(pf, f_lev, f_lev%index*10000+iteration+j, .true.)
           call pf_delta_q0(pf,level_index)
-          if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep in mid of Vcycle,lev=',level_index          
+          if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep in mid of Vcycle,lev=',level_index
           call f_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, 1)
           call pf_send(pf, f_lev, f_lev%index*10000+iteration+j, .false.)
        end do
@@ -627,7 +627,7 @@ contains
        call f_lev%delta_q0%copy(f_lev%q0)
        call pf_recv(pf, f_lev, f_lev%index*10000+iteration, .true.)
        call pf_delta_q0(pf,level_index)
-       if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep in mid of Vcycle,lev=',level_index                 
+       if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep in mid of Vcycle,lev=',level_index
        call f_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, f_lev%nsweeps)
        call pf_send(pf, f_lev, f_lev%index*10000+iteration, .false.)
     endif
@@ -690,9 +690,9 @@ contains
        call f_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, f_lev%nsweeps)
        call pf_send(pf, f_lev, level_index*10000+iteration, .false.)
        call pf_post(pf, f_lev, f_lev%index*10000+iteration)
-       call f_lev%delta_q0%copy(f_lev%q0)              
-       call pf_recv(pf, f_lev, level_index*10000+iteration, .false.)   ! This is actually a wait since the recieve was posted above
-       call pf_delta_q0(pf,level_index)       
+       call f_lev%delta_q0%copy(f_lev%q0)
+       call pf_recv(pf, f_lev, level_index*10000+iteration, .false.)   ! This is actually a wait since the receive was posted above
+       call pf_delta_q0(pf,level_index)
        call restrict_time_space_fas(pf, t0, dt, level_index)
        call save(pf,c_lev)
     end do
@@ -707,14 +707,14 @@ contains
           call pf_recv(pf, f_lev, f_lev%index*10000+iteration+j, .true.)
           call f_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, 1)
           call pf_send(pf, f_lev, f_lev%index*10000+iteration+j, .false.)
-          call pf_delta_q0(pf,level_index)          
+          call pf_delta_q0(pf,level_index)
        end do
     else
-       call f_lev%delta_q0%copy(f_lev%q0)       
+       call f_lev%delta_q0%copy(f_lev%q0)
        call pf_recv(pf, f_lev, f_lev%index*10000+iteration, .true.)
        call f_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, f_lev%nsweeps)
        call pf_send(pf, f_lev, f_lev%index*10000+iteration, .false.)
-       call pf_delta_q0(pf,level_index)          
+       call pf_delta_q0(pf,level_index)
     endif
 
     ! Now move coarse to fine interpolating and sweeping
@@ -732,22 +732,22 @@ contains
           ! new fine initial condition
           call interpolate_q0(pf, f_lev, c_lev,flags=0)
        end if
-       call f_lev%delta_q0%copy(f_lev%q0)              
-       
+       call f_lev%delta_q0%copy(f_lev%q0)
+
        ! don't sweep on the finest level since that is only done at beginning
        if (level_index <= level_index_f) then
-          if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 3,lev=',level_index                       
+          if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 3,lev=',level_index
           call f_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, f_lev%nsweeps)
        else  !  compute residual for diagnostics since we didn't sweep
           pf%state%sweep=1
        end if
        call pf_send(pf, f_lev, level_index*10000+iteration, .false.)
        call pf_post(pf, f_lev, f_lev%index*10000+iteration)
-       call pf_recv(pf, f_lev, level_index*10000+iteration, .false.)   ! This is actually a wait since the recieve was posted above
-       call pf_delta_q0(pf,level_index)                    
+       call pf_recv(pf, f_lev, level_index*10000+iteration, .false.)   ! This is actually a wait since the receive was posted above
+       call pf_delta_q0(pf,level_index)
        call pf_residual(pf, f_lev%index, dt,0)
 
-       print '("last resid  rank: ",i3.3,es14.7)', pf%rank,f_lev%residual       
+       print '("last resid  rank: ",i3.3,es14.7)', pf%rank,f_lev%residual
     end do
 
   end subroutine pf_Vcycle_pySDC

@@ -22,7 +22,7 @@ module pf_mod_petscVec
   use petscvec
   implicit none
 
-  !>  Type to create and destroy N-dimenstional arrays 
+  !>  Type to create and destroy N-dimenstional arrays
   type, extends(pf_factory_t) :: pf_petscVec_factory_t
    contains
      procedure :: create_single  => pf_petscVec_create_single
@@ -30,7 +30,7 @@ module pf_mod_petscVec
      procedure :: destroy_single => pf_petscVec_destroy_single
      procedure :: destroy_array => pf_petscVec_destroy_array
   end type pf_petscVec_factory_t
-  
+
   !>  1-dimensional array type,  extends the abstract encap type
   type, extends(pf_encap_t) :: pf_petscVec_t
      integer             :: ndim
@@ -51,7 +51,7 @@ contains
   function cast_as_pf_petscVec(encap_polymorph) result(pf_petscVec_obj)
     class(pf_encap_t), intent(in), target :: encap_polymorph
     type(pf_petscVec_t), pointer :: pf_petscVec_obj
-    
+
     select type(encap_polymorph)
     type is (pf_petscVec_t)
        pf_petscVec_obj => encap_polymorph
@@ -70,13 +70,13 @@ contains
 
        call VecCreate(PETSC_COMM_WORLD,q%petscVec,ierr);CHKERRQ(ierr)
        call VecSetSizes(q%petscVec,PETSC_DECIDE,shape_in(1),ierr);CHKERRQ(ierr)
-       
+
        call VecSetFromOptions(q%petscVec,ierr);CHKERRQ(ierr)
        call VecGetLocalSize(q%petscVec,psize,ierr);CHKERRQ(ierr)
        call mpi_comm_rank(PETSC_COMM_WORLD, rank,ierr);CHKERRQ(ierr)
 
        allocate(q%arr_shape(SIZE(shape_in)),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                                
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
        q%ndim   = SIZE(shape_in)
        q%arr_shape = shape_in
     end select
@@ -90,7 +90,7 @@ contains
     integer,                intent(in   )              :: lev_shape(:)
     integer :: ierr
     allocate(pf_petscVec_t::x,stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                             
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     call pf_petscVec_build(x, lev_shape)
   end subroutine pf_petscVec_create_single
 
@@ -103,7 +103,7 @@ contains
     integer,                intent(in   )              :: lev_shape(:)
     integer :: i,ierr
     allocate(pf_petscVec_t::x(n),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                             
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     do i = 1, n
        call pf_petscVec_build(x(i), lev_shape)
     end do
@@ -156,7 +156,7 @@ contains
 
   !>  The following are the base subroutines that all encapsulations must provide
   !!
-  
+
   !> Subroutine to set array to a scalar  value.
   subroutine pf_petscVec_setval(this, val, flags)
     class(pf_petscVec_t), intent(inout)           :: this
@@ -198,9 +198,9 @@ contains
     call VecGetArrayReadF90(this%petscVec,p_petscVec,this%ierr);CHKERRQ(this%ierr)
     call VecGetLocalSize(this%petscVec,psize,this%ierr);CHKERRQ(this%ierr)
     z=p_petscVec(1:psize)
-    
+
     call VecRestoreArrayReadF90(this%petscVec,p_petscVec,this%ierr);CHKERRQ(this%ierr)
-    
+
   end subroutine pf_petscVec_pack
 
   !> Subroutine to unpack a flatarray after receiving
@@ -217,7 +217,7 @@ contains
 
     p_petscVec=z(1:psize)
     call VecRestoreArrayF90(this%petscVec,p_petscVec,this%ierr);CHKERRQ(this%ierr)
-    
+
   end subroutine pf_petscVec_unpack
 
   !> Subroutine to define the norm of the array (here the max norm)

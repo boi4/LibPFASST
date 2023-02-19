@@ -67,7 +67,7 @@ contains
     class(pf_encap_t), allocatable :: rhs
 
     call pf_start_timer(pf, T_SWEEP,lev%index)
-    
+
     ! compute integrals and add fas correction
     do m = 1, lev%nnodes-1
        call lev%S(m)%setval(0.0_pfdp)
@@ -103,14 +103,14 @@ contains
        call this%f_comp(lev%Q(m+1), t, dtsdc(m), rhs, lev%index, lev%F(m+1,2),2)
 
        !  Now we need to do the final subtraction for the f3 piece
-       call rhs%copy(Lev%Q(m+1))       
+       call rhs%copy(Lev%Q(m+1))
        call rhs%axpy(-1.0_pfdp*dtsdc(m), lev%F(m+1,3))
 
        call this%f_comp(lev%Q(m+1), t, dtsdc(m), rhs, lev%index, lev%F(m+1,3),3)
        call this%f_eval(lev%Q(m+1), t, lev%index, lev%F(m+1,1),1)
        call this%f_eval(lev%Q(m+1), t, lev%index, lev%F(m+1,2),2)
     end do
-                         
+
     call lev%qend%copy(lev%Q(lev%nnodes))
 
     ! done
@@ -119,7 +119,7 @@ contains
     call pf_stop_timer(pf, T_SWEEP,lev%index)
 
   end subroutine misdc_sweep
-     
+
 
   ! Evaluate function values
   subroutine misdc_evaluate(this, lev, t, m)
@@ -147,9 +147,9 @@ contains
 
     nnodes = lev%nnodes
     allocate(this%SdiffE(nnodes-1,nnodes),stat=ierr)  !  S-FE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     allocate(this%SdiffI(nnodes-1,nnodes),stat=ierr)  !  S-BE
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
 
     this%SdiffE = lev%s0mat
     this%SdiffI = lev%s0mat
@@ -164,11 +164,11 @@ contains
   subroutine misdc_destroy(this, lev)
     class(pf_misdc_t), intent(inout) :: this
     class(pf_level_t), intent(inout) :: lev
-    
+
     deallocate(this%SdiffE)
     deallocate(this%SdiffI)
   end subroutine misdc_destroy
-  
+
   ! Compute SDC integral
   subroutine misdc_integrate(this, lev, qSDC, fSDC, dt, fintSDC)
     class(pf_misdc_t),  intent(inout) :: this
@@ -186,7 +186,7 @@ contains
              call fintSDC(n)%axpy(dt*lev%s0mat(n,m), fSDC(m,p))
           end do
        end do
-    end do    
+    end do
   end subroutine misdc_integrate
 
   subroutine misdc_residual(this, lev, dt)
@@ -196,7 +196,7 @@ contains
 
     call pf_generic_residual(this, lev, dt)
   end subroutine misdc_residual
-  
+
   subroutine misdc_evaluate_all(this, lev, t)
     class(pf_misdc_t), intent(inout) :: this
     class(pf_level_t), intent(inout) :: lev
@@ -204,5 +204,5 @@ contains
 
     call pf_generic_evaluate_all(this, lev, t)
   end subroutine misdc_evaluate_all
-  
+
 end module pf_mod_misdc

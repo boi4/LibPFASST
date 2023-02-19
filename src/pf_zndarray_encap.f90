@@ -3,7 +3,7 @@
 ! This file is part of LIBPFASST.
 !
 
-!> Module to define and encapsulation for an N-ndimensional complex array 
+!> Module to define and encapsulation for an N-ndimensional complex array
 !!
 !! When a new solution is created by a PFASST level, this encapsulation
 !! uses the levels 'lev_shape' attribute to create a new array with that
@@ -19,11 +19,11 @@
 !! performing any copies.
 !!
 module pf_mod_zndarray
-  use iso_c_binding  
+  use iso_c_binding
   use pf_mod_dtype
   use pf_mod_stop
   implicit none
-  
+
   !>  Factory for making zndarray
   type, extends(pf_factory_t) :: pf_zndarray_factory_t
    contains
@@ -32,11 +32,11 @@ module pf_mod_zndarray
      procedure :: destroy_single => zndarray_destroy_single
      procedure :: destroy_array => zndarray_destroy_array
   end type pf_zndarray_factory_t
-  
+
   !>  Complex N-dimensional array type,  extends the abstract encap type
   type, extends(pf_encap_t) :: pf_zndarray_t
      integer :: ndim
-     integer,    allocatable :: arr_shape(:)     
+     integer,    allocatable :: arr_shape(:)
      complex(pfdp), allocatable :: flatarray(:)
    contains
      procedure :: setval => zndarray_setval
@@ -49,38 +49,38 @@ module pf_mod_zndarray
      procedure, private  :: get_array_1d  ,get_array_2d,get_array_3d,get_array_4d
      generic :: get_array => get_array_1d ,get_array_2d,get_array_3d,get_array_4d
   end type pf_zndarray_t
-  
+
 contains
-  
+
   function cast_as_zndarray(encap_polymorph) result(zndarray_obj)
     class(pf_encap_t), intent(in), target :: encap_polymorph
     type(pf_zndarray_t), pointer :: zndarray_obj
-    
+
     select type(encap_polymorph)
     type is (pf_zndarray_t)
        zndarray_obj => encap_polymorph
     end select
   end function cast_as_zndarray
-  
+
   !> Allocates complex ndarray
   subroutine zndarray_build(q, shape_in)
     class(pf_encap_t), intent(inout) :: q
-    !type(pf_zndarray_t), intent(inout) :: q    
+    !type(pf_zndarray_t), intent(inout) :: q
     integer,           intent(in   ) :: shape_in(:)
-    
+
     integer :: ierr
     select type (q)
     class is (pf_zndarray_t)
        allocate(q%arr_shape(SIZE(shape_in)),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                         
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
        allocate(q%flatarray(product(shape_in)),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                         
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
        q%ndim   = SIZE(shape_in)
        q%arr_shape = shape_in
        q%flatarray = cmplx(66666666.0, -66666666.0,pfdp)
     end select
   end subroutine zndarray_build
-  
+
   !> Wrapper routine for allocation of a single zndarray type array
   subroutine zndarray_create_single(this, x, level_index,  lev_shape)
     class(pf_zndarray_factory_t), intent(inout) :: this
@@ -90,7 +90,7 @@ contains
 
     integer :: ierr
     allocate(pf_zndarray_t::x,stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)                      
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
     call zndarray_build(x, lev_shape)
 
   end subroutine zndarray_create_single
@@ -105,8 +105,8 @@ contains
     integer :: i,ierr
 
     allocate(pf_zndarray_t::x(n),stat=ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)    
-    
+    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
+
     do i = 1, n
 !       allocate(pf_zndarray_t::x(i),stat=ierr)
        call zndarray_build(x(i), lev_shape)
@@ -118,7 +118,7 @@ contains
   subroutine zndarray_destroy(encap)
     class(pf_encap_t), intent(inout) :: encap
     type(pf_zndarray_t), pointer :: zndarray_obj
-    
+
     zndarray_obj => cast_as_zndarray(encap)
     deallocate(zndarray_obj%arr_shape)
     deallocate(zndarray_obj%flatarray)
@@ -154,7 +154,7 @@ contains
        end do
     end select
     deallocate(x)
-    
+
   end subroutine zndarray_destroy_array
 
   !>  The following are the base subroutines that all encapsulations must provide
@@ -226,7 +226,7 @@ contains
     class(pf_zndarray_t), pointer :: zndarray_obj
 
     if (a .eq. 0.0_pfdp) return
-    
+
     zndarray_obj => cast_as_zndarray(x)
     if (a .eq. 1.0_pfdp) then
        this%flatarray = zndarray_obj%flatarray + this%flatarray
@@ -235,7 +235,7 @@ contains
     else
        this%flatarray = a*zndarray_obj%flatarray + this%flatarray
     end if
-    
+
   end subroutine zndarray_axpy
 
   subroutine zndarray_eprint(this,flags)
@@ -247,25 +247,25 @@ contains
 
 
   !>  Helper function to return the array part, these are called with get_array
-  subroutine get_array_1d(this,r,flags) 
+  subroutine get_array_1d(this,r,flags)
     class(pf_zndarray_t), target, intent(in) :: this
     complex(pfdp), pointer, intent(inout) :: r(:)
     integer,    intent(in   ), optional :: flags
     r => this%flatarray
   end subroutine get_array_1d
-  subroutine get_array_2d(this,r,flags) 
+  subroutine get_array_2d(this,r,flags)
     class(pf_zndarray_t), target, intent(in) :: this
     complex(pfdp), pointer, intent(inout) :: r(:,:)
     integer,    intent(in   ), optional :: flags
     r(1:this%arr_shape(1),1:this%arr_shape(2)) => this%flatarray
   end subroutine get_array_2d
-  subroutine get_array_3d(this,r,flags) 
+  subroutine get_array_3d(this,r,flags)
     class(pf_zndarray_t), target, intent(in) :: this
     complex(pfdp), pointer, intent(inout) :: r(:,:,:)
     integer,    intent(in   ), optional :: flags
     r(1:this%arr_shape(1),1:this%arr_shape(2),1:this%arr_shape(3)) => this%flatarray
   end subroutine get_array_3d
-  subroutine get_array_4d(this,r,flags) 
+  subroutine get_array_4d(this,r,flags)
     class(pf_zndarray_t), target, intent(in) :: this
     complex(pfdp), pointer, intent(inout) :: r(:,:,:,:)
     integer,    intent(in   ), optional :: flags
@@ -282,7 +282,7 @@ contains
        r => x%flatarray
     end select
   end function get_array1d
-  
+
 
   function get_array2d(x,flags) result(r)
     class(pf_encap_t), intent(in),target :: x
@@ -294,7 +294,7 @@ contains
        r(1:x%arr_shape(1),1:x%arr_shape(2)) => x%flatarray
     end select
   end function get_array2d
-  
+
 
   function get_array3d(x,flags) result(r)
     class(pf_encap_t), intent(in),target :: x

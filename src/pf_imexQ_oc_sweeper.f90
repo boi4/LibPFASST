@@ -78,7 +78,7 @@ module pf_mod_imexQ_oc
        integer,    intent(in   ) :: level_index     !!  Level index
        real(pfdp),        intent(inout) :: dt       !!  time step chosen
      end subroutine pf_comp_dt_p
-     
+
   end interface
 contains
 
@@ -131,7 +131,7 @@ contains
        sweep_y = .true.
        sweep_p = .true.
        allocate(norms_y(lev%nnodes-1),stat=ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)       
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'allocate fail, error=',ierr)
        do m = 1, Nnodes-1
           norms_y(m) = lev%R(m)%norm(1)
        end do
@@ -148,7 +148,7 @@ contains
 
   do k = 1,nsweeps   !!  Loop over sweeps
      pf%state%sweep=k
-     call call_hooks(pf, level_index, PF_PRE_SWEEP)    
+     call call_hooks(pf, level_index, PF_PRE_SWEEP)
      call pf_start_timer(pf, T_SWEEP,level_index)
 
     ! compute integrals from previous iteration and add fas correction
@@ -212,13 +212,13 @@ contains
       if (k .eq. 1) then
         call lev%Q(1)%copy(lev%q0, 1)
         if (this%explicit) then
-           call pf_start_timer(pf,T_FEVAL,level_index)           
+           call pf_start_timer(pf,T_FEVAL,level_index)
            call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,1), 1, 1, 1, step)
-           call pf_stop_timer(pf,T_FEVAL,level_index)           
+           call pf_stop_timer(pf,T_FEVAL,level_index)
         end if
-    
+
         if (this%implicit) then
-           call pf_start_timer(pf,T_FEVAL,level_index)           
+           call pf_start_timer(pf,T_FEVAL,level_index)
            call this%f_eval(lev%Q(1), t0, level_index, lev%F(1,2), 2, 1, 1, step)
            call pf_stop_timer(pf,T_FEVAL,level_index)
         end if
@@ -297,17 +297,17 @@ contains
             call pf_start_timer(pf,T_FCOMP,level_index)
             call this%f_comp(lev%Q(m+1), t, dt*this%QtilI(m,m+1), this%rhs, level_index, lev%F(m+1,2), 2, 1)
             call pf_stop_timer(pf,T_FCOMP,level_index)
-            
+
          else
             call lev%Q(m+1)%copy(this%rhs,1)
          end if
           !  Compute explicit piece on new value
          if (this%explicit) then
-            call pf_start_timer(pf,T_FEVAL,level_index)           
+            call pf_start_timer(pf,T_FEVAL,level_index)
             call this%f_eval(lev%Q(m+1), t, level_index, lev%F(m+1,1), 1, 1, m+1, step)
-            call pf_stop_timer(pf,T_FEVAL,level_index)           
+            call pf_stop_timer(pf,T_FEVAL,level_index)
          end if
-         
+
       end do
       !  Reset last values
       call lev%qend%copy(lev%Q(Nnodes), 1)
@@ -353,7 +353,7 @@ contains
            call this%f_eval(lev%Q(Nnodes), tend, level_index, lev%F(Nnodes,2), 2, 2, Nnodes, step)
            call pf_stop_timer(pf,T_FEVAL,level_index)
         end if
-        
+
       end if
 !        call Lev%encap%copy(Lev%Q(Nnodes), Lev%qend, 2)
 !        call imexQ_oc%f1eval(Lev%Q(Nnodes), tend, Lev%level, Lev%ctx, Lev%F(Nnodes,1), 2, Nnodes, step)
@@ -439,17 +439,17 @@ contains
     if(present(step)) then
        mystep = step
     else
-       call pf_stop(__FILE__,__LINE__,'step not present in evaluate, which=',which)  
+       call pf_stop(__FILE__,__LINE__,'step not present in evaluate, which=',which)
     end if
 
     if (this%explicit) then
-       call pf_start_timer(pf,T_FEVAL,level_index)         
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(m), t, level_index, lev%F(m,1), 1, which, m, mystep)
        call pf_stop_timer(pf,T_FEVAL,level_index)
     end if
-    
+
     if (this%implicit) then
-       call pf_start_timer(pf,T_FEVAL,level_index)           
+       call pf_start_timer(pf,T_FEVAL,level_index)
        call this%f_eval(lev%Q(m), t, level_index, lev%F(m,2), 2, which, m, mystep)
        call pf_stop_timer(pf,T_FEVAL,level_index)
     end if
@@ -469,8 +469,8 @@ contains
     type(pf_level_t), pointer  :: lev    !  Current level
     lev => pf%levels(level_index)   !  Assign level pointer
 
-    if (.not.present(flags)) call pf_stop(__FILE__,__LINE__,'IMEXQ_OC EVAL_ALL WITHOUT FLAGS')  
-    if (.not.present(step)) call pf_stop(__FILE__,__LINE__,'IMEXQ_OC EVAL_ALL WITHOUT step')  
+    if (.not.present(flags)) call pf_stop(__FILE__,__LINE__,'IMEXQ_OC EVAL_ALL WITHOUT FLAGS')
+    if (.not.present(step)) call pf_stop(__FILE__,__LINE__,'IMEXQ_OC EVAL_ALL WITHOUT step')
 
 
     do m = 1, lev%nnodes
@@ -547,7 +547,7 @@ contains
     if(present(flags)) then
       which = flags
     else
-       call pf_stop(__FILE__,__LINE__,'flags not present in integrate')  
+       call pf_stop(__FILE__,__LINE__,'flags not present in integrate')
     end if
 
     do n = 1, Nnodes-1
@@ -596,7 +596,7 @@ contains
     if(present(flags)) then
        which = flags
     else
-       call pf_stop(__FILE__,__LINE__,'flags not present in residual')        
+       call pf_stop(__FILE__,__LINE__,'flags not present in residual')
     end if
 !     print *, "IMEXQ_OC RESIDUAL ", which
 
@@ -636,10 +636,10 @@ contains
     integer :: m, p, which, mystep
     type(pf_level_t), pointer  :: lev    !  Current level
     lev => pf%levels(level_index)   !  Assign level pointer
-    
+
     which = 3
     if(present(flags)) which = flags
-    if (.not.present(flags))  call pf_stop(__FILE__,__LINE__,'flags not present in spreadq0')        
+    if (.not.present(flags))  call pf_stop(__FILE__,__LINE__,'flags not present in spreadq0')
 
 !     print *, "IMEXQ_OC SPREADQ0", which
 
@@ -648,9 +648,9 @@ contains
     if(present(step))  then
        mystep = step !needed for sequential version
     else
-       call pf_stop(__FILE__,__LINE__,'step not present in spreadq0')              
+       call pf_stop(__FILE__,__LINE__,'step not present in spreadq0')
     end if
-    
+
     select case(which)
       case(1)
         !  Stick initial condition into first node slot
@@ -711,7 +711,7 @@ contains
     type(pf_level_t),    pointer :: lev
     lev => pf%levels(level_index)   !!  Assign level pointer
 !    call this%comp_dt(lev%q0,t0,level_index, dt)
-    
+
   end subroutine imexQ_oc_compute_dt
 
 end module pf_mod_imexQ_oc

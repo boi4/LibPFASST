@@ -8,7 +8,7 @@ module pf_mod_pfasst
   use pf_mod_comm_mpi
   use pf_mod_utils
   use pf_mod_results
-  
+
   implicit none
 contains
 
@@ -27,7 +27,7 @@ contains
     integer :: ierr                  !! Record system call error
     integer :: l                     !!  Loop variable for levels
     integer :: system                !!  For opening directory
-    character(len=5) :: dirname     ! used to append output directory    
+    character(len=5) :: dirname     ! used to append output directory
     if (present(nlevels)) pf%nlevels = nlevels
 
 
@@ -65,7 +65,7 @@ contains
        pf%levels(l)%nnodes = pf%nnodes(l)
        pf%levels(l)%Finterp = pf%Finterp
     end do
-    
+
     !>  allocate hooks
     allocate(pf%hooks(pf%nlevels, PF_MAX_HOOK, PF_MAX_HOOKS),stat=ierr)
     if (ierr /= 0) call pf_stop(__FILE__,__LINE__,"allocate error hooks")
@@ -81,7 +81,7 @@ contains
 
     ! Create the output directory if it is not there
     ierr= system('mkdir -p dat')
-    if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory dat")       
+    if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory dat")
 
     !  Stick the number of processors on the end of the output directory
     write (dirname, "(A1,I0.4)") 'P',pf%comm%nproc
@@ -107,12 +107,12 @@ contains
     !  Set the size of mpi buffer
     buflen_local= product(shape_in)
     if (present(buflen_in))     buflen_local= buflen_in
-    
+
     pf%levels(level_index)%mpibuflen = buflen_local
 
-    ! 
+    !
   end subroutine pf_level_set_size
-  
+
 
   !> Setup both the PFASST object and the comm object
   subroutine pf_pfasst_setup(pf)
@@ -138,7 +138,7 @@ contains
        allocate(f_lev%rmat(c_lev%nnodes,f_lev%nnodes),stat=ierr)
        if (ierr /= 0) call pf_stop(__FILE__,__LINE__,"allocate fail",f_lev%nnodes)
 
-       
+
        ! with the RK stepper, no need to interpolate and restrict in time
        ! we only copy the first node and last node betweem levels
        if (pf%use_rk_stepper .eqv. .true.) then
@@ -155,7 +155,7 @@ contains
           call pf_time_interpolation_matrix(c_lev%nodes, c_lev%nnodes, f_lev%nodes, f_lev%nnodes, f_lev%rmat)
        endif
     end do
-    
+
 
   end subroutine pf_pfasst_setup
 
@@ -173,17 +173,17 @@ contains
     integer :: i,ierr
 
     lev => pf%levels(level_index)   !!  Assign level pointer
-    
+
     !> do some sanity checks
     mpibuflen  = lev%mpibuflen
     if (mpibuflen <= 0) call pf_stop(__FILE__,__LINE__,'bad value for mpibulen=',mpibuflen)
 
     nnodes = lev%nnodes
-    if (nnodes <= 0) call pf_stop(__FILE__,__LINE__,'bad value for nnodes=',nnodes)    
+    if (nnodes <= 0) call pf_stop(__FILE__,__LINE__,'bad value for nnodes=',nnodes)
 
     lev%residual = -1.0_pfdp
 
-    !> (re)allocate tauQ 
+    !> (re)allocate tauQ
     if ((lev%index < pf%nlevels) .and. (.not. allocated(lev%tauQ))) then
        call lev%ulevel%factory%create_array(lev%tauQ, nnodes-1, lev%index,  lev%lev_shape)
     end if
@@ -210,12 +210,12 @@ contains
        if (ierr /= 0) call pf_stop(__FILE__,__LINE__,"allocate error sdcmats")
        call pf_init_sdcmats(pf,lev%sdcmats, nnodes,lev%nflags)
        lev%nodes = lev%sdcmats%qnodes
-       
+
        lev%ulevel%sweeper%use_LUq=pf%use_LUq
        call lev%ulevel%sweeper%initialize(pf,level_index)
     end if
     if (pf%use_rk_stepper)  call lev%ulevel%stepper%initialize(pf,level_index)
-    !>  Allocate space for solutions 
+    !>  Allocate space for solutions
     call lev%ulevel%factory%create_array(lev%Q, nnodes, lev%index,  lev%lev_shape)
 
     !> allocate solution and function arrays for sdc sweepers
@@ -240,7 +240,7 @@ contains
 
     !>  Allocate space for residual and things need for sdc and rk
     call lev%ulevel%factory%create_array(lev%R, nnodes-1, lev%index,  lev%lev_shape)
-    
+
     call lev%ulevel%factory%create_single(lev%qend, lev%index,   lev%lev_shape)
     call lev%ulevel%factory%create_single(lev%q0, lev%index,   lev%lev_shape)
     call lev%ulevel%factory%create_single(lev%delta_q0, lev%index,   lev%lev_shape)
@@ -261,7 +261,7 @@ contains
     do l = 1, pf%nlevels
        call pf_level_destroy(pf,l)
     end do
-    
+
     !>  deallocate pfasst pointer arrays
 
     deallocate(pf%levels)
@@ -276,10 +276,10 @@ contains
   !> Deallocate PFASST level
   subroutine pf_level_destroy(pf,level_index)
     use pf_mod_quadrature
-    type(pf_pfasst_t), intent(inout),target :: pf  !!  Main pfasst structure    
+    type(pf_pfasst_t), intent(inout),target :: pf  !!  Main pfasst structure
     integer, intent(in)              :: level_index
 
-    class(pf_level_t), pointer :: lev    !!  points to current level    
+    class(pf_level_t), pointer :: lev    !!  points to current level
     lev => pf%levels(level_index)   !!  Assign level pointer
 
     if (.not. lev%allocated) return
@@ -291,7 +291,7 @@ contains
     !> deallocate nodes, flags, and integration matrices
     deallocate(lev%nodes)
     deallocate(lev%nflags)
-    
+
     !> deallocate solution and function storage
     if ((lev%index < pf%nlevels) .and. allocated(lev%tauQ)) then
        call lev%ulevel%factory%destroy_array(lev%tauQ)
@@ -307,8 +307,8 @@ contains
           call lev%ulevel%factory%destroy_array(lev%pQ)
        end if
     end if
-    
-    if (lev%interp_workspace_allocated   .eqv. .true.) then      
+
+    if (lev%interp_workspace_allocated   .eqv. .true.) then
        call lev%ulevel%factory%destroy_array(lev%c_delta)
        call lev%ulevel%factory%destroy_array(lev%cf_delta)
        lev%interp_workspace_allocated =.false.
@@ -347,11 +347,11 @@ contains
     type(pf_pfasst_t), intent(inout)           :: pf
     logical,           intent(in   )           :: read_cmd
     character(len=*),  intent(in   ), optional :: fname
-    
+
     ! local versions of pfasst parameters
     integer :: niters, MINiters,nlevels, qtype
     integer :: nsweeps(PF_MAXLEVS)
-    integer :: nsweeps_pred(PF_MAXLEVS) 
+    integer :: nsweeps_pred(PF_MAXLEVS)
     integer :: nnodes(PF_MAXLEVS)
 
     real(pfdp) :: abs_res_tol, rel_res_tol
@@ -363,7 +363,7 @@ contains
     integer    :: save_timings, save_solutions
     logical    :: use_no_left_q,use_composite_nodes,use_proper_nodes
     logical    :: use_dynamic_mpi
-    
+
     ! stuff for reading the command line
     integer, parameter :: un = 9
     integer            :: i, ios,stat
@@ -373,7 +373,7 @@ contains
     character(len=256) :: outdir    ! base name for output directory
 
 
-    
+
     !> define the namelist for reading
     namelist /pf_params/ niters,MINiters, nlevels, qtype, nsweeps, nsweeps_pred, nnodes, abs_res_tol, rel_res_tol
     namelist /pf_params/ PFASST_pred, RK_pred, pipeline_pred, nsweeps_burn, q0_style, taui0
@@ -416,7 +416,7 @@ contains
     use_sdc_sweeper= pf%use_sdc_sweeper
     use_pysdc_V= pf%use_pysdc_V
     sweep_at_conv= pf%sweep_at_conv
-    
+
     use_no_left_q      = pf%use_no_left_q
     use_composite_nodes= pf%use_composite_nodes
     use_proper_nodes   = pf%use_proper_nodes
@@ -494,7 +494,7 @@ contains
 
   !>  Subroutine to write out run parameters
   subroutine pf_print_options(pf, un_opt, show_mats_opt)
-    type(pf_pfasst_t), intent(inout)           :: pf   
+    type(pf_pfasst_t), intent(inout)           :: pf
     integer,           intent(in   ), optional :: un_opt
     logical,           intent(in   ), optional :: show_mats_opt
 
@@ -520,8 +520,8 @@ contains
        write(un,*) 'method:        ',' parareal'
     end if
     write(un,*) 'double precision:   ', pfdp   ,'  bytes'
-    write(un,*) 'quad precision:   ', pfqp   ,'  bytes'    
-    write(un,*) 'Output directory: ', trim(pf%outdir)    
+    write(un,*) 'quad precision:   ', pfqp   ,'  bytes'
+    write(un,*) 'Output directory: ', trim(pf%outdir)
     write(un,*) 'Nprocs:      ', pf%comm%nproc, '! number of pfasst "time" processors'
     write(un,*) 'Nlevels:     ', pf%nlevels, '! number of levels'
     if(pf%use_sdc_sweeper) then
@@ -564,7 +564,7 @@ contains
        if (pf%use_Sform) then
           write(un,*) 'The Smat form of stepping is being done'
        else
-          write(un,*) 'The Qmat form of stepping is being done'       
+          write(un,*) 'The Qmat form of stepping is being done'
        end if
        if (present(show_mats_opt)) show_mats=show_mats_opt
        if (show_mats) then
@@ -581,7 +581,7 @@ contains
        end if
        if (pf%use_proper_nodes)  write(un,*) 'Using proper node nesting'
        if (pf%use_composite_nodes)  write(un,*) 'Using composite node nesting'
-       if (pf%use_no_left_q)  write(un,*) ' Skipping left end point in quadruture rule '        
+       if (pf%use_no_left_q)  write(un,*) ' Skipping left end point in quadruture rule '
        write(un,*) 'taui0:     ',   pf%taui0, '! cutoff for tau correction'
        write(un,*) 'abs_res_tol:', pf%abs_res_tol, '! absolute residual tolerance: '
        write(un,*) 'rel_res_tol:', pf%rel_res_tol, '! relative residual tolerance: '
@@ -591,7 +591,7 @@ contains
        else
           write(un,*) 'V-cycling is off, fine level is pipelining'
        end if
-       
+
        if (pf%rk_pred) then
           write(un,*) 'Runge-Kutta used for predictor'
        else
@@ -606,7 +606,7 @@ contains
              write(un,*) 'Serial Predictor style  '
           end if
        endif
-       
+
        if (pf%debug) write(un,*) 'Debug mode is on '
 
        if (pf%use_dynamic_mpi) then
@@ -621,49 +621,49 @@ contains
 
   !>  Subroutine to dump stats to disk
   subroutine pf_dump_stats(pf)
-    type(pf_pfasst_t), intent(inout)           :: pf   
-    
+    type(pf_pfasst_t), intent(inout)           :: pf
+
     integer :: l, i,istat,system,un
     character(8)   :: date
     character(10)  :: time
     character(len = 128) :: fname  !!  output file name for residuals
     character(len = 128) :: datpath  !!  path to output files
 
-    
-    istat= system('mkdir -p dat/' // trim(pf%outdir))       
+
+    istat= system('mkdir -p dat/' // trim(pf%outdir))
     if (istat .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory in pf_print_options")
-    datpath= 'dat/' // trim(pf%outdir)     
+    datpath= 'dat/' // trim(pf%outdir)
     !  Save the statistics before returning
 
     if (pf%save_timings > 0)  call dump_timingsl(pf%results,pf)
-    
+
     if (pf%save_json) call pf_dump_json(pf)
-    
+
     call dump_results(pf%results)
 
 
   end subroutine pf_dump_stats
-  
+
   !>  Subroutine to write out run parameters
   subroutine pf_dump_json(pf)
-    type(pf_pfasst_t), intent(inout)           :: pf   
-    
+    type(pf_pfasst_t), intent(inout)           :: pf
+
     integer :: l, i,istat,system,un
     character(8)   :: date
     character(10)  :: time
     character(len = 128) :: fname  !!  output file name for residuals
     character(len = 128) :: datpath  !!  path to output files
-    
+
     if (pf%rank /= 0) return
-    
-    istat= system('mkdir -p dat/' // trim(pf%outdir))       
+
+    istat= system('mkdir -p dat/' // trim(pf%outdir))
     if (istat .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory in pf_print_options")
-    datpath= 'dat/' // trim(pf%outdir) 
+    datpath= 'dat/' // trim(pf%outdir)
     fname=trim(datpath) // '/pfasst_params.json'
     un=321
     open(unit=un, file=trim(fname), form='formatted')
     write(un,*) '{'
-    if(pf%use_sdc_sweeper) then 
+    if(pf%use_sdc_sweeper) then
        write(un,*) '      "method" :  "PFASST",'
     else
        write(un,*) '      "method" :  "parareal",'
@@ -679,7 +679,7 @@ contains
     write(un,122)  '"niters" :',      pf%niters, ','
     write(un,122)  '"miniters" :',    pf%miniters, ','
     write(un,123)  '"nsweeps" :',     adjustr(convert_int_array(pf%nsweeps(1:pf%nlevels),pf%nlevels)), ','
-    if(pf%use_sdc_sweeper) then 
+    if(pf%use_sdc_sweeper) then
        write(un,123)  '"nnodes" :',      adjustr(convert_int_array(pf%nnodes(1:pf%nlevels),pf%nlevels)), ','
        write(un,122)  '"q0_style" :',    pf%q0_style, ','
        write(un,122)  '"qtype" :',       pf%qtype, ','
@@ -687,10 +687,10 @@ contains
        write(un,122)  '"nsweeps_burn" :',pf%nsweeps_burn, ','
        write(un,122)  '"taui0" :',       pf%taui0, ','
     end if
-    
+
     write(un,124) '"abs_res_tol" :',pf%abs_res_tol, ','
     write(un,124) '"rel_res_tol" :',pf%abs_res_tol, ','
-    if(pf%use_sdc_sweeper) then        
+    if(pf%use_sdc_sweeper) then
        write(un,123)  '"use_proper_nodes" :',   convert_logical(pf%use_proper_nodes), ','
        write(un,123)  '"use_composite_nodes" :',convert_logical(pf%use_composite_nodes), ','
        write(un,123)  '"use_no_left_q" :',      convert_logical(pf%use_no_left_q), ','
@@ -707,14 +707,14 @@ contains
     write(un,123)  '"save_delta_q0" :',      convert_logical(pf%save_delta_q0), ','
     write(un,122)  '"save_timings" :',       pf%save_timings, ','
     write(un,122)  '"save_solutions" :',     pf%save_solutions, ','
-    write(un,123)  '"save_errors" :',        convert_logical(pf%save_errors), ','    
-    write(un,123)  '"debug" :',                 convert_logical(pf%debug),','    
+    write(un,123)  '"save_errors" :',        convert_logical(pf%save_errors), ','
+    write(un,123)  '"debug" :',                 convert_logical(pf%debug),','
     write(un,"(A24,A64)")  '"outdir" : ',       adjustr('"'//trim(pf%outdir)//'"')
     write(un,*) '}'
 122 FORMAT (A24,I15,A1)
 123 FORMAT (A24,A15,A1)
 124 FORMAT (A24,e15.6,A1)
-    close(unit=un)       
+    close(unit=un)
   end subroutine pf_dump_json
   !> Subroutine to make the matrices for interpolation  between noodes
   subroutine pf_time_interpolation_matrix(f_nodes, f_nnodes, c_nodes, c_nnodes, tmat)
@@ -723,17 +723,17 @@ contains
     real(pfdp), intent(in)  :: f_nodes(0:f_nnodes-1)  !!  quadrature nodes on fine  level
     real(pfdp), intent(in)  :: c_nodes(0:c_nnodes-1)  !!  quadrature nodes on coarse  level
     real(pfdp), intent(out) :: tmat(0:f_nnodes-1,0:c_nnodes-1)  !!  Interpolation matrix to compute
-    
+
     integer    :: i, j, k
     real(pfqp) :: xi, num, den
-    
+
     do i = 0, f_nnodes-1
        xi = real(f_nodes(i), pfqp)
-       
+
        do j = 0, c_nnodes-1
           den = 1.0_pfqp
           num = 1.0_pfqp
-          
+
           do k = 0, c_nnodes-1
              if (k == j) cycle
              den = den * real(c_nodes(j) - c_nodes(k),pfqp)
