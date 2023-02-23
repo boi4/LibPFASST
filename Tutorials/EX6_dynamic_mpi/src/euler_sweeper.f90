@@ -1,4 +1,3 @@
-! TODO
 module euler_sweeper
   use pf_mod_dtype
 
