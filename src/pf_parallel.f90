@@ -555,7 +555,6 @@ contains
        ! update counters
        current_block = current_block + 1
        pf%state%steps_done = pf%state%steps_done + blocksize
-       call sleep(1)
     end do !  Loop over the blocks
 
     call call_hooks(pf, -1, PF_POST_ALL)
