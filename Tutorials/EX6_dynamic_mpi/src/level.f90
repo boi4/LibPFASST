@@ -3,7 +3,6 @@
 !
 module my_level
   use pf_mod_dtype
-  use pf_mod_fftpackage
   implicit none
 
   !>  extend the generic level type by defining transfer operators
