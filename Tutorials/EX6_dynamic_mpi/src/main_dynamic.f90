@@ -1,38 +1,53 @@
-!
-!
-
-!>
 module myapp
 
 use pf_mod_mpi
+use mpi
 use pf_mod_zndarray
 use pf_mod_dynres
-use mpidynres
 use, intrinsic :: iso_c_binding
 
 contains
   subroutine entry() bind(c)
     implicit none
 
-    integer ::  ierror
-    type(c_ptr) ::  session
+    integer :: ierror
+    integer :: world_rank
+    logical :: finished
+    logical :: initial_start
+    integer :: size
 
-
-    !> Initialize MPI Session
-    call mpi_session_init(MPI_INFO_NULL, MPI_ERRHANDLER_NULL, session, ierror)
+    !> Initialize MPI
+    call mpi_init(ierror)
     if (ierror /= 0) &
         stop "ERROR: Can't initialize MPI."
 
-    !> Call the solver
-    call run(session)
+    call mpi_comm_rank(MPI_COMM_WORLD, world_rank, ierror)
+
+
+    initial_start = .TRUE.
+    do while (.not. finished)
+      call run(initial_start, finished)
+      initial_start = .FALSE.
+
+      do while (.TRUE.)
+         ! receive size of new communicator
+         call mpi_bcast(size, 1, MPI_INT, 0, MPI_COMM_WORLD, ierror)
+         if (world_rank < size) then
+            exit
+         else
+            ! dummy
+            call mpi_bcast(size, 1, MPI_INT, 0, MPI_COMM_WORLD, ierror)
+         end if
+      end do
+    end do
 
     !> Close mpi
-    call mpi_session_finalize(session)
+    call mpi_finalize(ierror)
   end subroutine entry
 
 
-  !>  This subroutine implements pfasst to solve the equation
-  subroutine run(session)
+  !>  This subroutine implements pfasst to solve the advection diffusion equation
+  subroutine run(initial_start, finished)
     use pfasst  !< This module has include statements for the main pfasst routines
     use my_sweeper  !< Local module for sweeper and function evaluations
     use my_level    !< Local module for the levels
@@ -42,15 +57,15 @@ contains
 
     implicit none
 
-    type(c_ptr), intent(in), target ::  session
+    logical,intent(in)  :: initial_start
+    logical,intent(out) :: finished
 
     !>  Local variables
-    type(pf_pfasst_t) :: pf       !<  the main pfasst structure
-    type(pf_comm_t)   :: comm     !<  the communicator
-    type(pf_dynres_t)   :: dynres     !<  the dynamic resource handler
+    type(pf_pfasst_t)  :: pf       !<  the main pfasst structure
+    type(pf_comm_t)    :: comm     !<  the communicator
+    type(pf_dynres_t)  :: dynres     !<  the dynamic resource handler
     type(pf_zndarray_t):: y_0      !<  the initial condition
-    character(256)    :: pf_fname   !<  file name for input of PFASST parameters
-    logical           :: finished
+    character(256)     :: pf_fname   !<  file name for input of PFASST parameters
 
     integer           :: l   !  loop variable over levels
     integer           :: ierror
@@ -67,16 +82,12 @@ contains
     !>  Create the pfasst structure
     call pf_pfasst_create_dynamic(pf, dynres=dynres, fname=pf_fname)
 
-    if (pf%use_dynamic_mpi) then
-        !> Set up dynres handler
-        call pf_dynres_create(dynres, session)
+    !> Set up dynres handler
+    call pf_dynres_create(dynres)
+    dynres%is_dynamic_start = .not. initial_start
 
-        !> Create communicator by either joining existing run or by mpi://WORLD
-        call pf_dynres_create_comm(dynres, comm)
-    else
-        !>  Set up communicator
-        call pf_mpi_create(comm, MPI_COMM_WORLD)
-    end if
+    !> Create communicator by either joining existing run or by mpi://WORLD
+    call pf_dynres_create_comm(dynres, comm)
 
 
     !> Loop over levels and set some level specific parameters
@@ -102,13 +113,13 @@ contains
     !> Add some hooks for output
     call pf_add_hook(pf, -1, PF_POST_SWEEP, echo_error)
 
+    !>  Output the run options
     if (.not. pf%dynres%is_dynamic_start) then
-       !>  Output the run options
        call pf_print_options(pf,un_opt=6)
-       !>  Output local parameters
-       call print_loc_options(pf,un_opt=6)
     end if
 
+    !>  Output local parameters
+    call print_loc_options(pf,un_opt=6)
 
     !>  Allocate initial consdition
     call zndarray_build(y_0, [ 1 ])
@@ -119,19 +130,11 @@ contains
     !>  Allocate solution
     call zndarray_build(qend, [ 0 ])
 
-    !> Do the PFASST stepping
-    if (pf%use_dynamic_mpi) then
-       call pf_pfasst_run(pf, y_0, dt, 0.0_pfdp, nsteps, qend, join_existing=pf%dynres%is_dynamic_start)
-    else
-       call pf_pfasst_run(pf, y_0, dt, 0.0_pfdp, nsteps, qend)
-    end if
+    call pf_pfasst_run(pf, y_0, dt, 0.0_pfdp, nsteps, qend, join_existing=pf%dynres%is_dynamic_start)
 
-    finished = .TRUE.
-    if (pf%use_dynamic_mpi) then
-       finished = .not. pf%dynres%needs_shutdown
-    end if
+    finished = .not. pf%dynres%needs_shutdown
 
-    if (finished .and. pf%state%step == (pf%state%nsteps - 1)) then
+    if (finished .and. pf%rank == (pf%comm%nproc - 1)) then
        sol  => get_array1d(qend)
        print *, "Finished!"
        print *, sol
@@ -139,10 +142,8 @@ contains
        !print *,sol
     end if
 
-    if (pf%use_dynamic_mpi) then
-        !> destroy dynres handler
-        call pf_dynres_destroy(dynres)
-    end if
+    !> destroy dynres handler
+    call pf_dynres_destroy(dynres)
 
     !>  Deallocate initial condition and final solution
     call zndarray_destroy(y_0)
@@ -153,59 +154,11 @@ contains
   end subroutine run
 
 
-
-
-
-
-
-
-
-
-
-  subroutine seed_rng()
-    integer :: n
-    integer,allocatable :: seed(:)
-
-    call random_seed(size=n)
-    allocate(seed(n))
-    seed = 123456789    ! putting arbitrary seed to all elements
-    call random_seed(put=seed)
-    deallocate(seed)
-  end subroutine seed_rng
-
-
-  character(len=64) function itoa(n) result(s)
-      integer, intent(in) :: n
-      write (s, *) n
-      s = adjustl(s)
-  end function itoa
-
-
 end module myapp
 
 
 program main
-  use myapp, only: entry,itoa
+  use myapp, only: entry
 
-  use pf_mod_mpi
-  use mpidynres_sim
-
-  implicit none
-
-  type(MPIDYNRES_SIM_CONFIG) :: config
-  integer :: ierror, world_size
-  procedure(mpidynres_main_func), pointer :: main_func => entry
-
-  call MPI_INIT(ierror)
-  !call MPIDYNRES_SIM_GET_DEFAULT_CONFIG(config)
-  config%base_communicator = MPI_COMM_WORLD
-  call MPI_INFO_CREATE(config%manager_config, ierror)
-  ! call MPI_INFO_SET(config%manager_config, "manager_initial_number_random", "yes")
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, world_size, ierror)
-  call MPI_INFO_SET(config%manager_config, "manager_initial_number", itoa(world_size - 1), ierror)
-
-  call MPIDYNRES_SIM_START(config, main_func)
-
-  call MPI_INFO_FREE(config%manager_config, ierror)
-  call MPI_FINALIZE(ierror)
+  call entry()
 end program main

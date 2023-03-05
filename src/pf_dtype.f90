@@ -240,15 +240,10 @@ module pf_mod_dtype
 
 !  !>  Data type for dynamic MPI
   type :: pf_dynres_t
-     type(c_ptr)         :: session    ! the mpi session
-     character(len=4096) :: main_pset ! the main process set used TODO: allocate to be max pset length
-
      logical             :: is_dynamic_start = .false.
      logical             :: needs_shutdown = .false.
 
-     character(len=4096) :: delta_pset  ! resource change process set
-     integer             :: rc_type ! the resource change type
-     integer             :: rc_tag ! the resource change tag/handle
+     integer             :: current_procs_size
 
      logical             :: sync_root ! whether this process is the sync root for state synchronization
   end type pf_dynres_t
