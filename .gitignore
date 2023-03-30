@@ -34,3 +34,5 @@ final_solution
 .pytest_cache
 /TAGS
 *.ipynb_checkpoints
+
+*.mod
