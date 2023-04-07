@@ -6,7 +6,7 @@ LIBPFASST ?= ../..
 BUILDDIR = build
 
 EXE = main.exe
-USE_FFT=TRUE
+USE_FFT=FALSE
 include $(LIBPFASST)/Makefile.defaults
 
 FSRC = src/level.f90 src/sweeper.f90 src/hooks.f90 src/probin.f90 src/main.f90
