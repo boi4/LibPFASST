@@ -7,7 +7,7 @@
      nlevels  = 1
 
      !  These are internal pfasst variables that can be reset
-     niters = 1  !  default is 5
+     niters = 20  !  default is 5
 
      !  Type of quadrature nodes (default is 1=Gauss-Lobatto)
      qtype   = 1
@@ -34,15 +34,14 @@
      save_timings   = 0      !!  0=none, 1=total only, 2=all, 3           =all and echo
      save_solutions = 0      !!  0  =none, 1=end, 2       =all time steps, 3=all iterations
 
+     ! this option needs to be set!!!!!!
      use_dynamic_mpi = .true.
 /
 
 !  Now define the local variables you need
 &PARAMS
-
     lam = (2.0,0)
     Tfin = 1.0
     nsteps = 1000
-    !nsteps = 10000
 
 /
