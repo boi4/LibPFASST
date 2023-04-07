@@ -93,8 +93,8 @@ else
   FSRC += src/pf_mpi.f90
   ifeq ($(DYNRES),TRUE)
     FSRC += src/pf_dynres.f90
-    FFLAGS += -I $(DYNRES_PATH)/build/include
-    LDFLAGS += -L $(DYNRES_PATH)/build/lib -lmpidynres
+    FFLAGS += -I $(MPIDYNRES_PATH)/build/include
+    LDFLAGS += -L $(MPIDYNRES_PATH)/build/lib -lmpidynres
   endif
 endif
 
