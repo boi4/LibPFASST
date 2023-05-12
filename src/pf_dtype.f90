@@ -239,26 +239,41 @@ module pf_mod_dtype
 
 
 !  !>  Data type for dynamic MPI
-  type :: pf_dynres_t
-     type(c_ptr)         :: session    ! the mpi session
-     character(len=4096) :: main_pset ! the main process set used TODO: allocate to be max pset length
+  type :: pf_dynprocs_t
+     integer                       :: session    ! the mpi session
+     character(len=:), allocatable :: main_pset ! the main process set used
 
-     logical             :: is_dynamic_start = .false.
-     logical             :: needs_shutdown = .false.
+     logical                       :: is_dynamic_start = .false.
+     logical                       :: needs_shutdown = .false.
 
-     character(len=4096) :: delta_pset  ! resource change process set
-     integer             :: rc_type ! the resource change type
-     integer             :: rc_tag ! the resource change tag/handle
+     ! resource changes
+     character(len=:), allocatable :: delta_pset  ! resource change process set
+     integer                       :: rc_type ! the resource change type
+     integer                       :: rc_tag ! the resource change tag/handle
 
-     logical             :: sync_root ! whether this process is the sync root for state synchronization
-  end type pf_dynres_t
+
+     ! in some cases, multiple pfasst instances run in parallel
+     character(len=:), allocatable :: global_pset
+
+     ! global communicator info (only relevant)
+     logical                       :: global_used = .false. ! whether there are multiple parallel pfasst instances
+     integer                       :: global_comm ! the communicator used for global coordination among these instances
+     integer                       :: global_rank
+     integer                       :: global_size
+     integer                       :: global_num_instances ! number of pfasst instances
+     integer                       :: global_instance_identifier ! the identifier of this pfasst instance
+
+     ! this is only relevant for the global leader
+     ! warning: indices start at 1, but identifiers at 0!
+     integer, allocatable          :: local_pfasst_leader_ranks(:) ! the ranks of the local pfasst leaders
+  end type pf_dynprocs_t
 
 
   type :: pf_results_t
-     real(pfdp), allocatable ::    errors(:,:,:,:)
+     real(pfdp), allocatable :: errors(:,:,:,:)
      real(pfdp), allocatable :: residuals(:,:,:,:)  !  (level,block,niter+1,sweep)
-     real(pfdp), allocatable ::  delta_q0(:,:,:,:)  !  (level,block,niter+1,sweep)
-     real(pfdp), allocatable ::  iters(:)  !           (block)
+     real(pfdp), allocatable :: delta_q0(:,:,:,:)  !  (level,block,niter+1,sweep)
+     real(pfdp), allocatable :: iters(:)  !           (block)
      integer :: nlevs
      integer :: nsteps
      integer :: niters  !  really the max niters
@@ -325,11 +340,11 @@ module pf_mod_dtype
      integer :: rk_nstages(PF_MAXLEVS)=-1 !! number of runge-kutta stages per level
      logical :: RK_pred = .false.         !!  true if the coarse level is initialized with Runge-Kutta instead of PFASST
 
-     ! -- dynamic MPI options
-     logical :: use_dynamic_mpi = .false.
-
      ! -- misc
      logical :: debug = .false.         !!  If true, debug diagnostics are printed
+
+     ! -- dynprocs options
+     logical :: use_dynprocs = .false.  !!  If true, dynprocs are used
 
      ! -- controller for the results
      logical :: save_residuals = .true.  !!  Will save residuals every time they are set
@@ -346,7 +361,7 @@ module pf_mod_dtype
      type(pf_level_t), allocatable :: levels(:) !! Holds the levels
      type(pf_comm_t),  pointer :: comm    !! Points to communicator
      type(pf_results_t) :: results   !!  Hold results for each level
-     type(pf_dynres_t), pointer :: dynres !! points to dynamic resource object
+     type(pf_dynprocs_t), pointer :: dynprocs !! points to dynamic resource object
 
      !> hooks variables
      type(pf_hook_t), allocatable :: hooks(:,:,:)  !!  Holds the hooks

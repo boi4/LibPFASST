@@ -6,7 +6,7 @@
 #
 #  The second option is to use the F77 implementation in src/pf_fftpack.f90
 #  This might cause compiler errors and/or warnings with some compilers
-#  due to it's "classic"  style
+#  due to its "classic"  style
 
 #  Add the interface to the FFT
 FSRC += src/pf_fft.f90 

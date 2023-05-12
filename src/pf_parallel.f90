@@ -14,7 +14,7 @@ module pf_mod_parallel
   use pf_mod_hooks
   use pf_mod_comm
   use pf_mod_results
-  use pf_mod_dynres
+  use pf_mod_dynprocs
   implicit none
 contains
 
@@ -37,7 +37,7 @@ contains
     integer :: nsteps_loc  !!  local number of time steps
     real(pfdp) :: tend_loc !!  The final time of run
     integer :: ierr
-    logical :: je, pe ! join existing prematurte exit copies
+    logical :: je, pe ! join existing, premature exit copies
 
     je = .FALSE.
     if (present(join_existing)) je = join_existing
@@ -66,12 +66,6 @@ contains
     !>  Allocate stuff for holding results
     call initialize_results(pf)
 
-    !  do sanity checks on Nproc
-    !  TODO: these can be very likely removed
-    if (.NOT. pf%use_dynamic_mpi) then
-        if (mod(nsteps_loc,nproc) > 0) call pf_stop(__FILE__,__LINE__,'nsteps must be multiple of nproc ,nsteps=',nsteps_loc)
-    end if
-
     !>  Try to sync everyone
     if (.NOT. je) call mpi_barrier(pf%comm%comm, ierr)
 
@@ -95,6 +89,7 @@ contains
     !  1.  nlevels==1  and nprocs ==1 -> Serial SDC
     !      Predictor is either spreadQ or nothing
     !      Then we just call a loop on sweeps
+
     !      Communication is copy
     !  2.  nlevels > 1  and nprocs ==1 -> Serial MLSDC
     !      Predictor is needed to populate levels (or nothing)
@@ -247,7 +242,7 @@ contains
              if (pf%debug) print*,  'DEBUG --',pf%rank,'sweep at pred 4,lev=',level_index
              call c_lev%ulevel%sweeper%sweep(pf, level_index, t0, dt, 1)
              !  Send forward
-             call pf_send(pf, c_lev,  c_lev%index*110000+pf%rank+1+k, .false.)
+             call pf_send(pf, c_lev, c_lev%index*110000+pf%rank+1+k, .true.)
           end do ! k = 1, c_lev%nsweeps_pred-1
        else  !  Don't pipeline
           if (c_lev%nsweeps_pred .gt. 0) then
@@ -281,6 +276,9 @@ contains
     pf%state%iter   = 0
 
     call pf_stop_timer(pf, T_PREDICTOR)
+
+    call call_hooks(pf, -1, PF_POST_PREDICTOR)
+
     call call_hooks(pf, -1, PF_POST_ITERATION)
 
     pf%state%status = PF_STATUS_ITERATING
@@ -389,12 +387,16 @@ contains
     integer                    :: blocksize     !! current block size
     logical                    :: first_iter
 
+    integer :: ierr
 
 
+    ! set join run
     join_run = .FALSE.
     if (present(join_existing)) join_run = join_existing
-    if (join_run .AND. (.NOT. pf%use_dynamic_mpi)) call pf_stop(__FILE__,__LINE__,'enable use_dynamic_mpi to be able to join existing runs')
 
+    if (join_run .and. .not. pf%use_dynprocs) then
+       call pf_stop(__FILE__,__LINE__,'cannot join existing run if pf_pfasst_create_dynmic was not called')
+    end if
 
 
     ! set finest level to visit in the following run
@@ -413,14 +415,14 @@ contains
        pf%state%steps_done = 0
        pf%state%pfblock    = 1
 
-       !  Stick the initial condition into q0 (will happen on all processors)
+       ! Stick the initial condition into q0 (will happen on all processors)
        call lev%q0%copy(q0, flags=0)
     else
-       call pf_dynres_join_run(pf, lev%recv, lev%mpibuflen)
+       call pf_dynprocs_join_run(pf, lev%recv, lev%mpibuflen)
        call lev%q0%unpack(lev%recv) ! unpack the received initial condition
     end if
 
-    !> intialize other variables
+    !> initialize other variables
     pf%state%step       = pf%state%steps_done + pf%rank
     pf%state%t0         = pf%state%step * dt
     pf%state%dt         = dt
@@ -432,6 +434,10 @@ contains
 
     do while (pf%state%steps_done < nsteps)
        call pf_start_timer(pf, T_BLOCK)
+       print *, "========================================="
+       print *, pf%state%pfblock
+       print *, pf%state%steps_done
+       print *, "========================================="
 
        if (.NOT. first_iter) then
           !  Broadcast initial condition
@@ -446,15 +452,13 @@ contains
              call lev%q0%copy(lev%qend, flags=0)    !!  Just stick qend in q0
           end if
 
-          ! dynamic mpi resizing
-          if (pf%use_dynamic_mpi) then
-             !call pf_dynres_submit_preference(pf) NOT IMPLEMENTED YET
-
-             call lev%q0%pack(lev%send)    !!  Everyone resets their q0
+          if (pf%use_dynprocs) then
+             ! dynamic mpi resizing
+             ! call lev%q0%pack(lev%send)    !!  Everyone resets their q0
              pf%state%pfblock = current_block
-             call pf_dynres_resize(pf, lev%send, lev%mpibuflen)
+             call pf_dynprocs_resize(pf, lev%send, lev%mpibuflen)
 
-             if (pf%dynres%needs_shutdown) exit ! break loop if we need to shut down
+             if (pf%dynprocs%needs_shutdown) exit ! break loop if we need to shut down
           end if
 
           !>  Update the step and t0 variables for new block
@@ -468,6 +472,9 @@ contains
 
        !> Determine the next block size
        blocksize = min(pf%comm%nproc, nsteps - pf%state%steps_done)
+       !> Warning: Here we create an inconsistent state
+       !> but it should only be like that in the last block iteration
+       pf%comm%nproc = blocksize
 
        ! Each block will consist of
        !  0.  choose time step
@@ -488,12 +495,12 @@ contains
 
 
        if (pf%rank >= blocksize) then
+          ! TODO
           ! this processor is not participating in the computation
           ! we can free it if we use dynamic mpi
-          if (pf%use_dynamic_mpi) then
-             !pf%dynres%needs_shutdown = .TRUE.
-             exit ! break loop
-          end if
+          ! how can we make sure that the application knows where the actual final solution is located at?
+          !pf%dynprocs%needs_shutdown = .TRUE.
+          exit ! break loop
        else
           ! start the actual computation
           if (pf%debug) print *,  'DEBUG --',pf%rank,'Starting  step=',pf%state%step,'  block k=',current_block, '  blocksize =', blocksize
@@ -506,6 +513,7 @@ contains
           call pf_set_resid(pf,lev%index,lev%residual)
 
           call call_hooks(pf, -1, PF_POST_ITERATION)
+
 
           do current_iteration = 1, pf%niters
              !print *,"pfasst iter"
@@ -559,18 +567,20 @@ contains
 
     call call_hooks(pf, -1, PF_POST_ALL)
 
-    if ((.NOT. pf%use_dynamic_mpi) .OR. (.NOT. pf%dynres%needs_shutdown)) then
-       if (present(premature_exit)) premature_exit = .FALSE.
-       call call_hooks(pf, -1, PF_POST_ALL)
-
-       !  Grab the last solution for return (if wanted)
-       if (present(qend)) then
-          call qend%copy(lev%qend, flags=0)
+    if (pf%use_dynprocs) then
+       if (pf%dynprocs%needs_shutdown) then
+          if (present(premature_exit)) premature_exit = .TRUE.
+          return
        end if
-    else
-       if (present(premature_exit)) premature_exit = .TRUE.
     end if
 
+    if (present(premature_exit)) premature_exit = .FALSE.
+    call call_hooks(pf, -1, PF_POST_ALL)
+
+    !  Grab the last solution for return (if wanted)
+    if (present(qend)) then
+        call qend%copy(lev%qend, flags=0)
+    end if
   end subroutine pf_block_run
 
 
