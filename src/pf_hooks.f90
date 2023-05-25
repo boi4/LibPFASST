@@ -26,7 +26,11 @@ module pf_mod_hooks
        PF_PRE_CONVERGENCE   = 15, &
        PF_POST_CONVERGENCE  = 16, &
        PF_POST_ALL          = 17, &
-       PF_MAX_HOOK          = 17
+       PF_PRE_POT_RESIZE    = 18, &
+       PF_POST_POT_RESIZE   = 19, &
+       PF_PRE_RESIZE        = 20, &
+       PF_POST_RESIZE       = 21, &
+       PF_MAX_HOOK          = 21
 
   integer, parameter :: &
        PF_HOOK_LOG_ONE  = 1, &
@@ -34,24 +38,28 @@ module pf_mod_hooks
        PF_HOOK_LOG_LAST = PF_MAX_HOOK
 
   !>  Define hook names
-  character(len=20), parameter :: hook_names(PF_HOOK_LOG_LAST) = (/ &
-       'pre-predictor      ',  &
-       'post-predictor     ',  &
-       'pre-iteration      ',  &
-       'post-iteration     ',  &
-       'pre-sweep          ',  &
-       'post-sweep         ',  &
-       'pre-block          ',  &
-       'post-block         ',  &
-       'pre-interp-all     ',  &
-       'post-interp-all    ',  &
-       'pre-interp-q0      ',  &
-       'post-interp-q0     ',  &
-       'pre-restrict-all   ',  &
-       'post-restrict-all  ',  &
-       'pre-convergence    ',  &
-       'post-convergence   ',  &
-       'post-all           ' /)
+  character(len=22), parameter :: hook_names(PF_HOOK_LOG_LAST) = (/ &
+       'pre-predictor         ',  &
+       'post-predictor        ',  &
+       'pre-iteration         ',  &
+       'post-iteration        ',  &
+       'pre-sweep             ',  &
+       'post-sweep            ',  &
+       'pre-block             ',  &
+       'post-block            ',  &
+       'pre-interp-all        ',  &
+       'post-interp-all       ',  &
+       'pre-interp-q0         ',  &
+       'post-interp-q0        ',  &
+       'pre-restrict-all      ',  &
+       'post-restrict-all     ',  &
+       'pre-convergence       ',  &
+       'post-convergence      ',  &
+       'post-all              ',  &
+       'pre-potential-resize  ', &
+       'post-potential-resize ', &
+       'pre-resize            ', &
+       'post-resize           ' /)
 
 contains
 

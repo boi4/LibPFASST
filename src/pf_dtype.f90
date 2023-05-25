@@ -240,32 +240,53 @@ module pf_mod_dtype
 
 !  !>  Data type for dynamic MPI
   type :: pf_dynprocs_t
+     ! is an application wants to change the number of parallel time steps
+     ! it should set this value via the 'PF_PRE_POT_RESIZE' hook
+     ! resize_delta is reset to zero after each resize, no matter if successful
+     integer                       :: resize_delta = 0
+
      integer                       :: session    ! the mpi session
-     character(len=:), allocatable :: main_pset ! the main process set used
+     ! note that the main MPI communicator derived from main_pset is stored in pf_comm
+     character(len=:), allocatable :: main_pset  ! the main process set used
 
      logical                       :: is_dynamic_start = .false.
-     logical                       :: needs_shutdown = .false.
+     logical                       :: needs_shutdown   = .false.
 
      ! resource changes
      character(len=:), allocatable :: delta_pset  ! resource change process set
-     integer                       :: rc_type ! the resource change type
-     integer                       :: rc_tag ! the resource change tag/handle
+     integer                       :: rc_op       ! the resource change psetop op type
 
 
      ! in some cases, multiple pfasst instances run in parallel
+     ! we are both storing a global pset, that contains all processes of other pfasst runs
+     ! and a horizontal pset, that contains all processes with the same rank in their resp. main_pset
+     ! This can look like this:
+     !                         libpfasst psets (=main psets)
+     !         ^                v v v v
+     !         |              +---------+
+     !         |           >  | 2 5 8 11|
+     !         |horizontal    +---------+
+     !         |           >  | 1 4 7 10|
+     !         |     psets    +---------+
+     !         |           >  | 0 3 6 9 | < these have rank 0 in libpfasst psets and are the local leaders
+     !         |              +---------+
+     !         |                ^
+     !         |                this one is both rank 0 in time pset and space pset and rank 0 in global comm
+     !    time |
+     !
+     !    here, there are 4 pfasst instances running in parallel with 3 time parallel steps
+     !    the global pset would contain all 12 of these processes
      character(len=:), allocatable :: global_pset
+     character(len=:), allocatable :: horizontal_pset
 
-     ! global communicator info (only relevant)
+     ! global communicator info (only relevant if global_used)
      logical                       :: global_used = .false. ! whether there are multiple parallel pfasst instances
      integer                       :: global_comm ! the communicator used for global coordination among these instances
      integer                       :: global_rank
      integer                       :: global_size
-     integer                       :: global_num_instances ! number of pfasst instances
-     integer                       :: global_instance_identifier ! the identifier of this pfasst instance
-
-     ! this is only relevant for the global leader
-     ! warning: indices start at 1, but identifiers at 0!
-     integer, allocatable          :: local_pfasst_leader_ranks(:) ! the ranks of the local pfasst leaders
+     integer                       :: horizontal_comm
+     integer                       :: horizontal_rank
+     integer                       :: horizontal_size
   end type pf_dynprocs_t
 
 
