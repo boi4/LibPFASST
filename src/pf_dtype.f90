@@ -271,7 +271,7 @@ module pf_mod_dtype
      !         |           >  | 0 3 6 9 | < these have rank 0 in libpfasst psets and are the local leaders
      !         |              +---------+
      !         |                ^
-     !         |                this one is both rank 0 in time pset and space pset and rank 0 in global comm
+     !         |                this one is both rank 0 in time pset and horizontal/space pset and rank 0 in global comm
      !    time |
      !
      !    here, there are 4 pfasst instances running in parallel with 3 time parallel steps

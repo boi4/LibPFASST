@@ -30,7 +30,9 @@ module pf_mod_hooks
        PF_POST_POT_RESIZE   = 19, &
        PF_PRE_RESIZE        = 20, &
        PF_POST_RESIZE       = 21, &
-       PF_MAX_HOOK          = 21
+       PF_PRE_SYNC          = 22, &
+       PF_POST_SYNC         = 23, &
+       PF_MAX_HOOK          = 23
 
   integer, parameter :: &
        PF_HOOK_LOG_ONE  = 1, &
@@ -56,10 +58,12 @@ module pf_mod_hooks
        'pre-convergence       ',  &
        'post-convergence      ',  &
        'post-all              ',  &
-       'pre-potential-resize  ', &
-       'post-potential-resize ', &
-       'pre-resize            ', &
-       'post-resize           ' /)
+       'pre-potential-resize  ',  &
+       'post-potential-resize ',  &
+       'pre-resize            ',  &
+       'post-resize           ',  &
+       'pre-sync              ',  &
+       'post-sync             '/)
 
 contains
 

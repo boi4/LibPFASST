@@ -9,44 +9,14 @@ module pf_mod_dynprocs
 
   implicit none
 contains
-   subroutine print_my_psets(session)
-     integer, intent(in) :: session
-     character(len=MPI_MAX_PSET_NAME_LEN) pset
-     integer :: n
-     integer :: len
-     integer :: ierr
-     integer :: i
-     integer :: info
-     character(len=20)  :: tmpstr
-     logical :: contains_key
-
-     call mpi_session_get_num_psets(session, MPI_INFO_NULL, n, ierr)
-     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get num psets fail, error=',ierr)
-
-     do i = 0, n-1
-       len = MPI_MAX_PSET_NAME_LEN
-       call mpi_session_get_nth_pset(session, MPI_INFO_NULL, i, len, pset, ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get pset name fail, error=',ierr)
-
-       call mpi_session_get_pset_info(session, pset, info, ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get pset info fail, error=',ierr)
-       call mpi_info_get(info, "mpi_included", 20, tmpstr, contains_key, ierr)
-       if (ierr /=0 .OR. .not. contains_key) call pf_stop(__FILE__,__LINE__,'mpi info get fail, error=',ierr)
-
-       if (tmpstr == "True") then
-          print *, "pset ", i, ": ", trim(pset)
-       else
-          print *, "//pset ", i, ": ", trim(pset)
-       end if
-     end do
-   end subroutine print_my_psets
 
 
   !> =========================================================
   !> Main functions to be called by the user
   !> =========================================================
 
-  ! create new dynprocs object using initialized MPI session
+  ! Constructor for new dynprocs object using initialized MPI session
+  ! when running multiple pfasst instances in parallel, global_set and horizontal_set must be provided
   subroutine pf_dynprocs_create(this, session, main_pset, global_pset, horizontal_pset)
     type(pf_dynprocs_t), intent(out)          :: this
     integer            , intent(in)           :: session
@@ -232,48 +202,48 @@ contains
   end subroutine pf_dynprocs_pset_contains_me
 
 
-   !> helper to check if process was started dynamically
+  !> helper to check if process was started dynamically
   !> can be used by applications too as it's not pfasst specific
-   subroutine pf_dynprocs_check_dynamic(session, is_dynamic)
-     integer, intent(in) :: session
-     logical, intent(out) :: is_dynamic
-     integer info,ierr
-     character(len=20) :: boolean_string
-     logical :: contains_key
+  subroutine pf_dynprocs_check_dynamic(session, is_dynamic)
+    integer, intent(in) :: session
+    logical, intent(out) :: is_dynamic
+    integer info,ierr
+    character(len=20) :: boolean_string
+    logical :: contains_key
 
-    ! Get the info from our mpi://WORLD pset
-    call mpi_session_get_pset_info(session, "mpi://WORLD", info, ierr)
+   ! Get the info from our mpi://WORLD pset
+   call mpi_session_get_pset_info(session, "mpi://WORLD", info, ierr)
 
-    ! get value for the 'mpi_dyn' key -> if true, this process was added dynamically
-    call mpi_info_get(info, "mpi_dyn", 20, boolean_string, contains_key, ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info get fail, error=',ierr)
+   ! get value for the 'mpi_dyn' key -> if true, this process was added dynamically
+   call mpi_info_get(info, "mpi_dyn", 20, boolean_string, contains_key, ierr)
+   if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info get fail, error=',ierr)
 
-    is_dynamic = (contains_key .and. trim(boolean_string) == "True")
-   end subroutine pf_dynprocs_check_dynamic
+   is_dynamic = (contains_key .and. trim(boolean_string) == "True")
+  end subroutine pf_dynprocs_check_dynamic
 
 
-   !> helper to get the name of a pset op
-   !> useful for debugging
-   subroutine pf_dynprocs_psetop2str(psetop, str)
-     integer, intent(in) :: psetop
-     character(len=*), intent(out) :: str
+  !> helper to get the name of a pset op
+  !> useful for debugging
+  subroutine pf_dynprocs_psetop2str(psetop, str)
+    integer, intent(in) :: psetop
+    character(len=*), intent(out) :: str
 
-     character(len=23) :: myStrings(11) = [ &
-       "MPI_PSETOP_NULL        ", &
-       "MPI_PSETOP_ADD         ", &
-       "MPI_PSETOP_SUB         ", &
-       "MPI_PSETOP_REPLACE     ", &
-       "MPI_PSETOP_MALLEABLE   ", &
-       "MPI_PSETOP_GROW        ", &
-       "MPI_PSETOP_SHRINK      ", &
-       "MPI_PSETOP_UNION       ", &
-       "MPI_PSETOP_DIFFERENCE  ", &
-       "MPI_PSETOP_INTERSECTION", &
-       "MPI_PSETOP_SPLIT       " &
-     ]
+    character(len=23) :: myStrings(11) = [ &
+      "MPI_PSETOP_NULL        ", &
+      "MPI_PSETOP_ADD         ", &
+      "MPI_PSETOP_SUB         ", &
+      "MPI_PSETOP_REPLACE     ", &
+      "MPI_PSETOP_MALLEABLE   ", &
+      "MPI_PSETOP_GROW        ", &
+      "MPI_PSETOP_SHRINK      ", &
+      "MPI_PSETOP_UNION       ", &
+      "MPI_PSETOP_DIFFERENCE  ", &
+      "MPI_PSETOP_INTERSECTION", &
+      "MPI_PSETOP_SPLIT       " &
+    ]
 
-     str = mystrings(psetop+1)
-   end subroutine pf_dynprocs_psetop2str
+    str = mystrings(psetop+1)
+  end subroutine pf_dynprocs_psetop2str
 
 
 
@@ -468,6 +438,9 @@ contains
               if (pf%debug) print *, "Union pset: ", trim(union_pset)
           end if
 
+          ! broadcast union pset
+          call mpi_bcast(union_pset, MPI_MAX_PSET_NAME_LEN, MPI_CHARACTER, 0, pf%comm%comm, ierr)
+
           deallocate(input_psets)
        end if
     else
@@ -499,8 +472,7 @@ contains
     character(len=20) buf
     character(len=MPI_MAX_PSET_NAME_LEN)  :: union_pset
 
-    ! determine size of delta pset
-    ! TODO: mpi_size key is wrongly uninitialized (as of May 2023)
+    ! mpi_size key is wrongly uninitialized (as of May 2023)
     ! once it's fixed, this approach will be (probably) faster than the allreduce
     !call mpi_session_get_pset_info(pf%dynprocs%session, pf%dynprocs%delta_pset, info, ierr);
     !if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session get pset info fail, error=',ierr)
@@ -513,13 +485,12 @@ contains
     !
     !read(buf,*) delta_size
 
-    ! check if delta pset contains me
+    ! determine size of delta pset
     if (pf%dynprocs%needs_shutdown) then
        indicator = 1
     else
         indicator = 0
     end if
-
     call mpi_allreduce(indicator, delta_size, 1, MPI_INTEGER, MPI_SUM, pf%dynprocs%global_comm, ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi allreduce fail, error=',ierr)
 
@@ -706,8 +677,12 @@ contains
     ! check who is the leader for resource change psetops
     if (pf%dynprocs%global_used) then
        am_leader = (pf%dynprocs%global_rank == 0)
+       key_name = "pfasst://global_pset"
+       base_pset = pf%dynprocs%global_pset
     else
        am_leader = (pf%rank == 0)
+       key_name = "pfasst://main_pset"
+       base_pset = pf%dynprocs%main_pset
     end if
 
 
@@ -717,13 +692,6 @@ contains
        ! Publish the name of the new main PSet on the delta Pset
        call mpi_info_create(info, ierr)
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info create fail, error=',ierr)
-       if (pf%dynprocs%global_used) then
-          key_name = "pfasst://global_pset"
-          base_pset = pf%dynprocs%global_pset
-       else
-          key_name = "pfasst://main_pset"
-          base_pset = pf%dynprocs%main_pset
-       end if
 
        call mpi_info_set(info, key_name, base_pset, ierr)
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info set fail, error=',ierr)
@@ -740,8 +708,10 @@ contains
 
     ! finalize resource change
     if (am_leader) then
+       if (pf%debug) print *, "About to finalize psetop"
        call MPI_Session_dyn_finalize_psetop(pf%dynprocs%session, base_pset, ierr)
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session dyn finalize psetop fail, error=',ierr)
+       if (pf%debug) print *, "Done finalizing psetop"
     end if
 
     ! warning: new processes are started now if growing
@@ -766,19 +736,21 @@ contains
     end if
 
 
-    ! create new communicator from main pset
-    call pf_dynprocs_comm_from_pset(pf%dynprocs%session, pf%dynprocs%main_pset, main_mpi_comm)
+    if (.not. pf%dynprocs%needs_shutdown) then
+       ! create new communicator from main pset
+       call pf_dynprocs_comm_from_pset(pf%dynprocs%session, pf%dynprocs%main_pset, main_mpi_comm)
 
-    ! create new pfasst communicator
-    call pf_mpi_destroy(pf%comm)
-    call pf_mpi_create(pf%comm, main_mpi_comm)
+       ! create new pfasst communicator
+       call pf_mpi_destroy(pf%comm)
+       call pf_mpi_create(pf%comm, main_mpi_comm)
 
-    ! do some setup
-    call pf_mpi_setup(pf%comm, pf, ierr)
-    if (ierr /=0 )  call pf_stop(__FILE__,__LINE__,"ERROR: mpi_setup failed")
+       ! do some setup
+       call pf_mpi_setup(pf%comm, pf, ierr)
+       if (ierr /=0 )  call pf_stop(__FILE__,__LINE__,"ERROR: mpi_setup failed")
 
-    call mpi_barrier(pf%comm%comm, ierr)
-    if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
+       call mpi_barrier(pf%comm%comm, ierr)
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
+    end if
 
   end subroutine pf_dynprocs_apply_rc
 
@@ -846,6 +818,7 @@ contains
     integer :: ninput
     integer :: noutput
     integer :: num_proc_delta
+    integer :: union_size
     logical :: am_leader
 
     ! broadcast resize_delta from 0
@@ -867,38 +840,51 @@ contains
 
 
     if (num_proc_delta < 0 .and. (.not. pf%dynprocs%global_used .or. pf%dynprocs%horizontal_rank == 0)) then
-        ! need to create a pset of processes to shutdown
-        call pf_dynprocs_get_shrink_union(pf, -pf%dynprocs%resize_delta, union_pset)
+       if (pf%comm%nproc <= 1) then
+          print *, 'WARNING: cannot shrink below 1 time process'
+          num_proc_delta = 0
+       else
+          ! need to create a pset of processes to shutdown
+          call pf_dynprocs_get_shrink_union(pf, -pf%dynprocs%resize_delta, union_pset)
+          if (pf%debug) print *, "Creating psetop shrink union pset: ", trim(union_pset)
+       end if
     end if
 
     if (am_leader .and. num_proc_delta /= 0) then
        call mpi_info_create(info, ierr)
        if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi info create fail, error=',ierr)
-       if (num_proc_delta > 0) then
-          write (str, "(I4)") num_proc_delta
-          call mpi_info_set(info, "mpi_num_procs_add", str, ierr)
-       else
-          write (str, "(I4)") -num_proc_delta
-          call mpi_info_set(info, "mpi_num_procs_sub", str, ierr)
-       end if
-       if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi info set fail, error=',ierr)
 
        ! call psetop to create resource change
        if (num_proc_delta > 0) then
           input_psets(1) = base_pset
           ninput = 1
           op = MPI_PSETOP_GROW
-          if (pf%debug) print *, "Set op to GROW"
+          write (str, "(I4)") num_proc_delta
+          call mpi_info_set(info, "mpi_num_procs_add", str, ierr)
+          if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi info set fail, error=',ierr)
+
+          if (pf%debug) print *, "Set op to GROW by ", num_proc_delta
        else
           ! only shrink by the union pset
-          input_psets(1) = union_pset
-          ninput = 1
+          input_psets(1) = base_pset
+          input_psets(2) = union_pset
+          ninput = 2
+          ! This can be replaced with a single shrink in the future
           op = MPI_PSETOP_SHRINK
-          if (pf%debug) print *, "Set op to SHRINK"
+          write (str, "(I4)") -num_proc_delta
+          call mpi_info_set(info, "mpi_num_procs_sub", str, ierr)
+          if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi info set fail, error=',ierr)
+
+          if (pf%debug) print *, "Set op to SHRINK by ", -num_proc_delta, " using union pset ", trim(union_pset)
        end if
+
        noutput = 2
+       if (pf%debug) print *, "Calling psetop"
+       if (pf%debug) print *, "input psets(1): ", trim(input_psets(1))
+       if (pf%debug .and. ninput == 2) print *, "input psets(2): ", trim(input_psets(2))
        call mpi_session_dyn_v2a_psetop(pf%dynprocs%session, op, input_psets, ninput, output_psets, noutput, info, ierr)
        if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi session dyn v2a psetop fail, error=',ierr)
+
        if (op == MPI_PSETOP_NULL) then
           if (pf%debug) print *, "Psetop rejected"
        end if
@@ -933,13 +919,22 @@ contains
 
     character(len=MPI_MAX_PSET_NAME_LEN) :: pset_name
     character(len=MPI_MAX_PSET_NAME_LEN) :: output_psets(2)
+    character(len=MPI_MAX_PSET_NAME_LEN) :: input_psets(2)
     integer :: ierr
     integer :: noutput
+    integer :: op
+    integer :: info
+    integer :: comm
+    logical :: am_leader
 
     if (pf%dynprocs%global_used) then
        pset_name = pf%dynprocs%global_pset
+       comm = pf%dynprocs%global_comm
+       am_leader = (pf%dynprocs%global_rank == 0)
     else
        pset_name = pf%dynprocs%main_pset
+       comm = pf%comm%comm
+       am_leader = (pf%rank == 0)
     end if
 
     noutput = 2
@@ -950,12 +945,54 @@ contains
     if (pf%debug) print *, "got psetop: ", pf%dynprocs%rc_op
 
     if (pf%dynprocs%rc_op /= MPI_PSETOP_NULL) then
-        pf%dynprocs%delta_pset = output_psets(1)
-        if (pf%dynprocs%global_used) then
-           pf%dynprocs%global_pset = output_psets(2)
-        else
-           pf%dynprocs%main_pset = output_psets(2)
-        end if
+       pf%dynprocs%delta_pset = output_psets(1)
+
+       ! in case of ADD or SUB, we do GROW/SHRINK manually
+       if (pf%dynprocs%rc_op == MPI_PSETOP_ADD .or. pf%dynprocs%rc_op == MPI_PSETOP_SUB) then
+          if (am_leader) then
+             ! setup arguments
+             call mpi_info_create(info, ierr)
+             if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi info create fail, error=',ierr)
+
+             input_psets(1) = pset_name
+             input_psets(2) = pf%dynprocs%delta_pset
+
+             if (pf%dynprocs%rc_op == MPI_PSETOP_ADD) then
+                op = MPI_PSETOP_UNION
+             else
+                op = MPI_PSETOP_DIFFERENCE
+             end if
+
+             noutput = 1
+             call mpi_session_dyn_v2a_psetop(pf%dynprocs%session, op, input_psets, 2, output_psets, noutput, info, ierr)
+             if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi session dyn v2a psetop fail, error=',ierr)
+
+
+             call mpi_info_free(info, ierr)
+             if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi info free fail, error=',ierr)
+          end if
+
+          ! bcast union/diff result
+          call mpi_bcast(output_psets(1), MPI_MAX_PSET_NAME_LEN, MPI_CHARACTER, 0, comm, ierr)
+          if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'mpi bcast fail, error=',ierr)
+
+          ! make output_psets consisten with a grow/shrink request
+          output_psets(2) = output_psets(1)
+          output_psets(1) = pf%dynprocs%delta_pset
+
+          ! update op to grow/shrink, so apply_rc can handle accordingly
+          if (pf%dynprocs%rc_op == MPI_PSETOP_ADD) then
+             pf%dynprocs%rc_op = MPI_PSETOP_GROW
+          else
+             pf%dynprocs%rc_op = MPI_PSETOP_SHRINK
+          end if
+       end if
+
+       if (pf%dynprocs%global_used) then
+          pf%dynprocs%global_pset = output_psets(2)
+       else
+          pf%dynprocs%main_pset = output_psets(2)
+       end if
     end if
   end subroutine pf_dynprocs_check_rc
 
@@ -993,6 +1030,8 @@ contains
 
     if (pf%debug) print *, "Sync state called"
 
+    call call_hooks(pf, 1, PF_PRE_SYNC)
+
     ! share run state
     buf(1) = pf%state%steps_done
     buf(2) = pf%state%pfblock
@@ -1005,6 +1044,8 @@ contains
     ! share initial condition of next block
     call mpi_bcast(q0, q0len, myMPI_Datatype, 0, pf%comm%comm, ierr)
     if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi bcast fail, error=',ierr)
+
+    call call_hooks(pf, 1, PF_POST_SYNC)
   end subroutine pf_dynprocs_sync_state
 
 
