@@ -8,37 +8,23 @@ program main
 
 
   integer ::  ierror
+  integer :: session
 
+  !> Initialize MPI Session
+  call mpi_session_init(MPI_INFO_NULL, MPI_ERRORS_ARE_FATAL, session, ierr)
+  if (ierr /= 0) &
+      stop "ERROR: Can't initialize MPI."
 
-
-  !> Initialize MPI
-  call mpi_init(ierror)
-  if (ierror /= 0) &
-       stop "ERROR: Can't initialize MPI."
-
-  !> Call the advection-diffusion solver 
-  call run_pfasst()
+  !> Call the  solver
+  call run_pfasst(session)
 
   !> Close mpi
-  call mpi_finalize(ierror)
+  call mpi_session_finalize(session, ierr)
 
 contains
 
-
-  subroutine seed_rng()
-    integer :: n
-    integer,allocatable :: seed(:)
-
-    call random_seed(size=n)
-    allocate(seed(n))
-    seed = 123456789    ! putting arbitrary seed to all elements
-    call random_seed(put=seed)
-    deallocate(seed)
-  end subroutine seed_rng
-
-
   !>  This subroutine implements pfasst to solve the advection diffusion equation
-  subroutine run_pfasst()  
+  subroutine run_pfasst(session)
     use pfasst  !< This module has include statements for the main pfasst routines
     use my_sweeper  !< Local module for sweeper and function evaluations
     use my_level    !< Local module for the levels
@@ -47,15 +33,20 @@ contains
 
     implicit none
 
+    !> argument
+    integer, intent(in) :: session
+
     !>  Local variables
-    type(pf_pfasst_t) :: pf       !<  the main pfasst structure
-    type(pf_comm_t)   :: comm     !<  the communicator (here it is mpi)
-    type(pf_zndarray_t):: y_0      !<  the initial condition
-    character(256)    :: pf_fname   !<  file name for input of PFASST parameters
+    type(pf_pfasst_t)              :: pf       !<  the main pfasst structure
+    type(pf_dynprocs_t)            :: dynprocs     !<  instead of a pf_comm_t object, we use a pf_dynprocs_t object!
+    type(pf_zndarray_t)            :: y_0      !<  the initial condition
+    character(256)                 :: pf_fname   !<  file name for input of PFASST parameters
+    logical                        :: is_dynamic
+    logical                        :: premature_exit
 
-    integer           ::  l   !  loop variable over levels
+    integer                        ::  l   !  loop variable over levels
 
-    type(pf_zndarray_t):: qend      !<  the solution
+    type(pf_zndarray_t)            :: qend      !<  the solution
     complex(pfdp),         pointer :: sol(:)
 
 
@@ -64,11 +55,14 @@ contains
     !> Read problem parameters
     call probin_init(pf_fname)
 
+    ! determine if dynamic
+    call pf_dynprocs_check_dynamic(session, is_dynamic)
+
     !>  Set up communicator
-    call pf_mpi_create(comm, MPI_COMM_WORLD)
+    call pf_dynprocs_create(dynprocs, session, "mpi://WORLD")
 
     !>  Create the pfasst structure
-    call pf_pfasst_create(pf, comm, fname=pf_fname)
+    call pf_pfasst_create_dynamic(pf, dynprocs, fname=pf_fname)
 
 
     !> Loop over levels and set some level specific parameters
@@ -94,7 +88,10 @@ contains
     !> Add some hooks for output
     call pf_add_hook(pf, -1, PF_POST_SWEEP, echo_error)
 
-    !>  Output the run options 
+    !> Add hook for resizing logic
+    call pf_add_hook(pf, -1, PF_PRE_POT_RESIZE, resize_decider)
+
+    !>  Output the run options
     call pf_print_options(pf,un_opt=6)
 
     !>  Output local parameters
@@ -110,15 +107,17 @@ contains
     call zndarray_build(qend, [ 0 ])
 
     !> Do the PFASST stepping
-    call pf_pfasst_run(pf, y_0, dt, 0.0_pfdp, nsteps, qend)
+    call pf_pfasst_run(pf, y_0, dt, 0.0_pfdp, nsteps, qend, join_existing=is_dynamic, premature_exit=premature_exit)
 
-    sol  => get_array1d(qend)
-    print *, sol
-    !call qend%pack(sol)
-    !print *,sol
+    if (.not. premature_exit) then
+       sol  => get_array1d(qend)
+       print *, sol
+       !call qend%pack(sol)
+       !print *,sol
 
-    !>  Wait for everyone to be done
-    call mpi_barrier(pf%comm%comm, ierror)
+       !>  Wait for everyone to be done
+       call mpi_barrier(pf%comm%comm, ierror)
+    end if
 
     !>  Deallocate initial condition and final solution
     call zndarray_destroy(y_0)

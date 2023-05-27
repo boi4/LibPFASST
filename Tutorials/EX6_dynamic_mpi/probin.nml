@@ -33,8 +33,6 @@
      !save_json      = .false. !!  Will save a jason file of run parameters
      save_timings   = 0      !!  0=none, 1=total only, 2=all, 3           =all and echo
      save_solutions = 0      !!  0  =none, 1=end, 2       =all time steps, 3=all iterations
-
-     use_dynamic_mpi = .true.
 /
 
 !  Now define the local variables you need
