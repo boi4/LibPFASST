@@ -72,8 +72,8 @@ contains
     ! call exact(time, yexact)
     ! maxerr = maxval(abs(y_end-yexact))
 
-     !print '("time: ", f10.4," step: ", i7.7," rank: ",i3.3," iter: ",i4.3," level: ",i2.2," real: ",f20.10," complex: ",f20.20)', &
-          !time, step, rank, iter, level_index, real(y_end), aimag(y_end)
+     print '("time: ", f10.4," step: ", i7.7," rank: ",i3.3," iter: ",i4.3," level: ",i2.2," real: ",f20.10," complex: ",f20.20)', &
+          time, step, rank, iter, level_index, real(y_end), aimag(y_end)
 
     ! call pf_set_error(pf,level_index,maxerr)
 
