@@ -27,6 +27,7 @@ contains
     ! we only can set resize_delta at the process that calls the psetop
     if (pf%rank == 0 .and. ((.not. pf%dynprocs%global_used) .or. pf%dynprocs%horizontal_rank == 0)) then
         ! currently, we can only grow and shrink in the same granularity as procs per node
+        ! maybe this can be made more general using this trick: https://stackoverflow.com/a/40122688
         len = 20
         call get_environment_variable("OMPI_COMM_WORLD_LOCAL_SIZE", node_size_s, len, status)
         if (status == 0) then
