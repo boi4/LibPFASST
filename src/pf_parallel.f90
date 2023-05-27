@@ -434,10 +434,6 @@ contains
 
     do while (pf%state%steps_done < nsteps)
        call pf_start_timer(pf, T_BLOCK)
-       print *, "========================================="
-       print *, pf%state%pfblock
-       print *, pf%state%steps_done
-       print *, "========================================="
 
        if (.NOT. first_iter) then
           !  Broadcast initial condition
@@ -495,10 +491,8 @@ contains
 
 
        if (pf%rank >= blocksize) then
-          ! TODO
           ! this processor is not participating in the computation
           ! we can free it if we use dynamic mpi
-          ! how can we make sure that the application knows where the actual final solution is located at?
           !pf%dynprocs%needs_shutdown = .TRUE.
           exit ! break loop
        else
