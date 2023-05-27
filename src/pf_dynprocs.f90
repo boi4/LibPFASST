@@ -872,11 +872,9 @@ contains
           print *, 'WARNING: cannot shrink below 1 time process'
           num_proc_delta = 0
        else
-          if (am_leader) then
-            ! need to create a pset of processes to shutdown
-            call pf_dynprocs_get_shrink_union(pf, -pf%dynprocs%resize_delta, union_pset)
-            if (pf%debug) print *, "Creating psetop shrink union pset: ", trim(union_pset)
-          end if
+          ! need to create a pset of processes to shutdown
+          call pf_dynprocs_get_shrink_union(pf, -pf%dynprocs%resize_delta, union_pset)
+          if (pf%debug) print *, "Creating psetop shrink union pset: ", trim(union_pset)
        end if
     end if
 
