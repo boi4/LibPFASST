@@ -83,11 +83,11 @@ contains
   subroutine pf_pfasst_create_dynamic(pf, dynprocs, nlevels, fname, nocmd)
     use pf_mod_hooks, only: PF_MAX_HOOK
 
-    type(pf_pfasst_t)             , intent(inout)            :: pf        !! Main pfasst object
-    type(pf_dynprocs_t)           , intent(in)    , target   :: dynprocs  !! dynprocs object to add to pfasst
-    integer                       , intent(in)    , optional :: nlevels   !! number of pfasst levels
-    character(len=*)              , intent(in)    , optional :: fname     !! orInput file for pfasst parameters
-    logical                       , intent(in)    , optional :: nocmd     !! Determines if command line variables are to be read
+    type(pf_pfasst_t),   intent(inout)        :: pf        !! Main pfasst object
+    type(pf_dynprocs_t), intent(in), target   :: dynprocs  !! dynprocs object to add to pfasst
+    integer,             intent(in), optional :: nlevels   !! number of pfasst levels
+    character(len=*),    intent(in), optional :: fname     !! orInput file for pfasst parameters
+    logical,             intent(in), optional :: nocmd     !! Determines if command line variables are to be read
 
     logical :: read_cmd              !! Local version of nocmd
     integer :: ierr                  !! Record system call error
@@ -182,9 +182,9 @@ contains
   !> helper to check if process set pset contains the calling process
   !> can be used by applications too as it's not pfasst specific
   subroutine pf_dynprocs_pset_contains_me(session, pset, contains_me)
-     integer,                              intent(in)  :: session
-     character(len=MPI_MAX_PSET_NAME_LEN), intent(in)  :: pset
-     logical,                              intent(out) :: contains_me
+     integer,          intent(in)  :: session
+     character(len=*), intent(in)  :: pset
+     logical,          intent(out) :: contains_me
 
      integer :: info
      integer :: ierr
@@ -399,9 +399,12 @@ contains
   subroutine pf_dynprocs_get_shrink_union(pf, num_steps_to_shrink, union_pset)
     type(pf_pfasst_t),                    intent(inout) :: pf
     integer,                              intent(in)    :: num_steps_to_shrink
-    character(len=MPI_MAX_PSET_NAME_LEN), intent(inout) :: union_pset
+    character(len=*),                     intent(inout) :: union_pset
 
     character(len=MPI_MAX_PSET_NAME_LEN), allocatable  :: input_psets(:)
+    character(len=MPI_MAX_PSET_NAME_LEN)               :: output_psets(2)
+    character(len=30) :: splitstr
+    character(len=30) :: tmpstr
     integer :: i
     integer :: ierr
     integer :: info
@@ -444,8 +447,32 @@ contains
           deallocate(input_psets)
        end if
     else
-       ! TODO
-       !split main_pset
+       if (pf%rank == 0) then
+          ! do a split operation on main_pset
+          op = MPI_PSETOP_SPLIT
+          call mpi_info_create(info, ierr)
+          if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info create fail, error=',ierr)
+
+          splitstr = ""
+          write(tmpstr,'(I0)') (pf%comm%nproc - num_steps_to_shrink)
+          splitstr = trim(splitstr)//trim(tmpstr)//","
+
+          write(tmpstr,'(I0)') num_steps_to_shrink
+          splitstr = trim(splitstr)//trim(tmpstr)
+
+          call mpi_info_set(info, "mpi_part_sizes", splitstr, ierr)
+          if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info set fail, error=',ierr)
+
+          noutput = 2
+          print *, "calling mpi_session_dyn_v2a_psetop with part_sizes=", splitstr
+          call mpi_session_dyn_v2a_psetop(pf%dynprocs%session, op, pf%dynprocs%main_pset, 1, output_psets, noutput, info, ierr)
+          if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi session dyn v2a psetop fail, error=',ierr)
+
+          call mpi_info_free(info, ierr)
+          if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi info free fail, error=',ierr)
+
+          union_pset = output_psets(2)
+       end if
     end if
   end subroutine pf_dynprocs_get_shrink_union
 
@@ -737,6 +764,7 @@ contains
 
 
     if (.not. pf%dynprocs%needs_shutdown) then
+       if (pf%debug) print *, "Update main communicator from ", trim(pf%dynprocs%main_pset)
        ! create new communicator from main pset
        call pf_dynprocs_comm_from_pset(pf%dynprocs%session, pf%dynprocs%main_pset, main_mpi_comm)
 
@@ -844,9 +872,11 @@ contains
           print *, 'WARNING: cannot shrink below 1 time process'
           num_proc_delta = 0
        else
-          ! need to create a pset of processes to shutdown
-          call pf_dynprocs_get_shrink_union(pf, -pf%dynprocs%resize_delta, union_pset)
-          if (pf%debug) print *, "Creating psetop shrink union pset: ", trim(union_pset)
+          if (am_leader) then
+            ! need to create a pset of processes to shutdown
+            call pf_dynprocs_get_shrink_union(pf, -pf%dynprocs%resize_delta, union_pset)
+            if (pf%debug) print *, "Creating psetop shrink union pset: ", trim(union_pset)
+          end if
        end if
     end if
 
