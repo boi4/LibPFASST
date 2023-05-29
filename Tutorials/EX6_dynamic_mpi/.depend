@@ -1,0 +1,6 @@
+src/euler_sweeper.o : src/euler_sweeper.f90 
+src/hooks.o : src/hooks.f90 
+src/level.o : src/level.f90 src/sweeper.o 
+src/main.o : src/main.f90 src/probin.o src/hooks.o src/level.o src/sweeper.o 
+src/probin.o : src/probin.f90 
+src/sweeper.o : src/sweeper.f90 src/probin.o 
