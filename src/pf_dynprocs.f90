@@ -42,6 +42,9 @@ contains
     this%needs_shutdown = .FALSE.
     this%main_pset = main_pset
 
+    this%global_comm = MPI_COMM_NULL
+    this%horizontal_comm = MPI_COMM_NULL
+
     if (present(global_pset)) then
        if (.not. present(horizontal_pset)) call pf_stop(__FILE__,__LINE__,'fatal: horizontal_pset must be present if global_pset is present')
        this%global_used = .true.
@@ -62,7 +65,7 @@ contains
   ! destroy dynprocs object
   ! MPI Session must be finalized by application!
   subroutine pf_dynprocs_destroy(this)
-    type(pf_dynprocs_t), intent(out)   :: this
+    type(pf_dynprocs_t), intent(inout)   :: this
 
     integer :: ierr
     if (allocated(this%main_pset)) deallocate(this%main_pset)
@@ -74,6 +77,17 @@ contains
     if (allocated(this%horizontal_pset)) then
        deallocate(this%horizontal_pset)
        ! call mpi_comm_free(this%horizontal_comm, ierr)
+    end if
+
+    ! destroy communicators
+    if (this%global_comm /= MPI_COMM_NULL) then
+        call MPI_Comm_disconnect(this%global_comm, ierr)
+        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
+    end if
+
+    if (this%horizontal_comm /= MPI_COMM_NULL) then
+        call MPI_Comm_disconnect(this%horizontal_comm, ierr)
+        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
     end if
   end subroutine pf_dynprocs_destroy
 
@@ -743,18 +757,22 @@ contains
 
     ! warning: new processes are started now if growing
 
-    if (pf%dynprocs%global_used .and. .not. pf%dynprocs%needs_shutdown) then
+    if (pf%dynprocs%global_used) then
        ! create new global communicator
-       ! this will hang until new processes have called the same in pf_dynprocs_create_comm
        call mpi_comm_free(pf%dynprocs%global_comm, ierr)
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
-       call pf_dynprocs_comm_from_pset(pf%dynprocs%session, pf%dynprocs%global_pset, pf%dynprocs%global_comm)
+       pf%dynprocs%global_comm = MPI_COMM_NULL
 
-       ! get global size and rank (although these should stay the same)
-       call mpi_comm_size(pf%dynprocs%global_comm, pf%dynprocs%global_size, ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm size fail, error=',ierr)
-       call mpi_comm_rank(pf%dynprocs%global_comm, pf%dynprocs%global_rank, ierr)
-       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm rank fail, error=',ierr)
+       if (.not. pf%dynprocs%needs_shutdown) then
+          call pf_dynprocs_comm_from_pset(pf%dynprocs%session, pf%dynprocs%global_pset, pf%dynprocs%global_comm)
+          if (pf%debug) print *, "Updated global_comm from pset ", trim(pf%dynprocs%global_pset)
+
+          ! get global size and rank (although these should stay the same)
+          call mpi_comm_size(pf%dynprocs%global_comm, pf%dynprocs%global_size, ierr)
+          if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm size fail, error=',ierr)
+          call mpi_comm_rank(pf%dynprocs%global_comm, pf%dynprocs%global_rank, ierr)
+          if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm rank fail, error=',ierr)
+       end if
     end if
 
     if (pf%dynprocs%rc_op == MPI_PSETOP_GROW .and. pf%dynprocs%global_used) then
@@ -764,12 +782,12 @@ contains
 
 
     if (.not. pf%dynprocs%needs_shutdown) then
-       if (pf%debug) print *, "Update main communicator from ", trim(pf%dynprocs%main_pset)
        ! create new communicator from main pset
        call pf_dynprocs_comm_from_pset(pf%dynprocs%session, pf%dynprocs%main_pset, main_mpi_comm)
 
        ! create new pfasst communicator
        call pf_mpi_destroy(pf%comm)
+       if (pf%debug) print *, "Update main communicator from ", trim(pf%dynprocs%main_pset)
        call pf_mpi_create(pf%comm, main_mpi_comm)
 
        ! do some setup
@@ -780,6 +798,7 @@ contains
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi barrier fail, error=',ierr)
     end if
 
+    ! warning pf%comm%comm is still a valid communicator in processes that need to shutdown
   end subroutine pf_dynprocs_apply_rc
 
 

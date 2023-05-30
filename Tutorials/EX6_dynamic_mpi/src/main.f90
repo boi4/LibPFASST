@@ -7,7 +7,7 @@ program main
   use pf_mod_zndarray
 
 
-  integer ::  ierror
+  integer ::  ierr
   integer :: session
 
   !> Initialize MPI Session
@@ -116,7 +116,7 @@ contains
        !print *,sol
 
        !>  Wait for everyone to be done
-       call mpi_barrier(pf%comm%comm, ierror)
+       call mpi_barrier(pf%comm%comm, ierr)
     end if
 
     !>  Deallocate initial condition and final solution
@@ -124,6 +124,9 @@ contains
 
     !>  Deallocate pfasst structure
     call pf_pfasst_destroy(pf)
+
+    !> free PFASST communicator
+    call mpi_comm_free(pf%comm%comm, ierr)
 
   end subroutine run_pfasst
 
