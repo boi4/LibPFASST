@@ -72,11 +72,9 @@ contains
     if (allocated(this%delta_pset)) deallocate(this%delta_pset)
     if (allocated(this%global_pset)) then
        deallocate(this%global_pset)
-       ! call mpi_comm_free(this%global_comm, ierr)
     end if
     if (allocated(this%horizontal_pset)) then
        deallocate(this%horizontal_pset)
-       ! call mpi_comm_free(this%horizontal_comm, ierr)
     end if
 
     ! destroy communicators
@@ -365,7 +363,7 @@ contains
           if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi bcast fail, error=',ierr)
 
           ! ! destroy old communicator as it will get replaced by the new one
-          call mpi_comm_free(main_mpi_comm, ierr)
+          call mpi_comm_disconnect(main_mpi_comm, ierr)
           if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
        else
           ! if no dynamic global communicator, we need to get main pset name from session
@@ -759,7 +757,7 @@ contains
 
     if (pf%dynprocs%global_used) then
        ! create new global communicator
-       call mpi_comm_free(pf%dynprocs%global_comm, ierr)
+       call mpi_comm_disconnect(pf%dynprocs%global_comm, ierr)
        if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
        pf%dynprocs%global_comm = MPI_COMM_NULL
 
@@ -787,6 +785,9 @@ contains
 
        ! create new pfasst communicator
        call pf_mpi_destroy(pf%comm)
+       call mpi_comm_disconnect(pf%comm%comm, ierr)
+       if (ierr /=0) call pf_stop(__FILE__,__LINE__,'mpi comm free fail, error=',ierr)
+
        if (pf%debug) print *, "Update main communicator from ", trim(pf%dynprocs%main_pset)
        call pf_mpi_create(pf%comm, main_mpi_comm)
 

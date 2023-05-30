@@ -117,6 +117,7 @@ contains
 
        !>  Wait for everyone to be done
        call mpi_barrier(pf%comm%comm, ierr)
+
     end if
 
     !>  Deallocate initial condition and final solution
@@ -125,9 +126,8 @@ contains
     !>  Deallocate pfasst structure
     call pf_pfasst_destroy(pf)
 
-    !> free PFASST communicator
-    call mpi_comm_free(pf%comm%comm, ierr)
-
+    !> free PFASST communicator (already)
+    call mpi_comm_disconnect(pf%comm%comm, ierr)
   end subroutine run_pfasst
 
 end program
